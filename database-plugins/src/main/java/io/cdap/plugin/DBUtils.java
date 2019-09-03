@@ -135,9 +135,9 @@ public final class DBUtils {
 
         if (!resultsetFieldSchema.equals(simpleSchema)) {
           throw new IllegalArgumentException(String.format("Schema field %s has type %s but in input record found " +
-                                                             "type %s ",
-                                                           field.getName(), simpleSchema.getType(),
-                                                           resultsetFieldSchema.getType()));
+                                                             "type %s.",
+                                                           field.getName(), simpleSchema.getDisplayName(),
+                                                           resultsetFieldSchema.getDisplayName()));
         }
       }
       return schema.getFields();
