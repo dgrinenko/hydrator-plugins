@@ -61,6 +61,9 @@ public class TMSAlertPublisher extends AlertPublisher {
   @Override
   public void initialize(AlertPublisherContext context) throws Exception {
     super.initialize(context);
+    conf.validate(context.getFailureCollector());
+    context.getFailureCollector().getOrThrowException();
+
     try {
       context.getTopicProperties(conf.topic);
     } catch (TopicNotFoundException e) {
@@ -138,7 +141,7 @@ public class TMSAlertPublisher extends AlertPublisher {
 
     private void validate(FailureCollector collector) {
       if (autoCreateTopic && namespace != null) {
-        collector.addFailure("Cannot auto-create topic when namespace is set.", "Namespace must not be set to auto-create topic.").withConfigProperty("namespace");
+        collector.addFailure("Cannot auto-create topic when namespace is set.", "Namespace must not be set to auto-create topic.").withConfigProperty("namespace").withConfigProperty("autoCreateTopic");
       }
       if (maxAlertsPerSecond < 1) {
         collector.addFailure(String.format("Invalid maxAlertsPerSecond %d. Must be at least 1.", maxAlertsPerSecond), "").withConfigProperty("maxAlertsPerSecond");
