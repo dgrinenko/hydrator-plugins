@@ -25,7 +25,12 @@ import io.cdap.cdap.api.messaging.MessagePublisher;
 import io.cdap.cdap.api.messaging.TopicAlreadyExistsException;
 import io.cdap.cdap.api.messaging.TopicNotFoundException;
 import io.cdap.cdap.api.plugin.PluginConfig;
-import io.cdap.cdap.etl.api.*;
+import io.cdap.cdap.etl.api.Alert;
+import io.cdap.cdap.etl.api.AlertPublisher;
+import io.cdap.cdap.etl.api.AlertPublisherContext;
+import io.cdap.cdap.etl.api.FailureCollector;
+import io.cdap.cdap.etl.api.PipelineConfigurer;
+import io.cdap.cdap.etl.api.StageConfigurer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,10 +146,13 @@ public class TMSAlertPublisher extends AlertPublisher {
 
     private void validate(FailureCollector collector) {
       if (autoCreateTopic && namespace != null) {
-        collector.addFailure("Cannot auto-create topic when namespace is set.", "Namespace must not be set to auto-create topic.").withConfigProperty("namespace").withConfigProperty("autoCreateTopic");
+        collector.addFailure("Cannot auto-create topic when namespace is set.",
+                "Namespace must not be set to auto-create topic.").withConfigProperty("namespace")
+                .withConfigProperty("autoCreateTopic");
       }
       if (maxAlertsPerSecond < 1) {
-        collector.addFailure(String.format("Invalid maxAlertsPerSecond %d. Must be at least 1.", maxAlertsPerSecond), "").withConfigProperty("maxAlertsPerSecond");
+        collector.addFailure(String.format("Invalid maxAlertsPerSecond %d. Must be at least 1.", maxAlertsPerSecond),
+                "").withConfigProperty("maxAlertsPerSecond");
       }
     }
   }
