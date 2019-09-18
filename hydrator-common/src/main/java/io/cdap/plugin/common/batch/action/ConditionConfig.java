@@ -19,6 +19,7 @@ package io.cdap.plugin.common.batch.action;
 import com.google.common.base.Joiner;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.plugin.PluginConfig;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.batch.BatchActionContext;
 
 import javax.annotation.Nullable;
@@ -44,13 +45,13 @@ public class ConditionConfig extends PluginConfig {
   }
 
   @SuppressWarnings("ConstantConditions")
-  public void validate() {
+  public void validate(FailureCollector collector) {
     try {
       Condition.valueOf(runCondition.toUpperCase());
     } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(String.format(
+      collector.addFailure(String.format(
         "Invalid runCondition value '%s'.  Must be one of %s.",
-        runCondition, Joiner.on(',').join(Condition.values())));
+        runCondition, Joiner.on(',').join(Condition.values())), "");
     }
   }
 

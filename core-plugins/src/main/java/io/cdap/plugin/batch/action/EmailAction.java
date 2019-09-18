@@ -22,7 +22,9 @@ import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.workflow.WorkflowToken;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
+import io.cdap.cdap.etl.api.StageConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchActionContext;
 import io.cdap.cdap.etl.api.batch.PostAction;
 import io.cdap.plugin.common.batch.action.ConditionConfig;
@@ -54,6 +56,13 @@ public class EmailAction extends PostAction {
    * Config for the email action plugin.
    */
   public static class Config extends ConditionConfig {
+
+    // Constants for property names
+    private static final String SENDER = "sender";
+    private static final String RECIPIENTS = "recipients";
+    private static final String USERNAME = "username";
+    private static final String PASSWORD = "password";
+
     @Description("Comma separated list of addresses to send the email to.")
     @Macro
     private String recipients;
@@ -107,37 +116,44 @@ public class EmailAction extends PostAction {
       includeWorkflowToken = false;
     }
 
-    public void validate() {
-      super.validate();
+    public void validate(FailureCollector collector) {
+      super.validate(collector);
 
-      if (!containsMacro("username") && (Strings.isNullOrEmpty(username) ^ Strings.isNullOrEmpty(password))) {
-        throw new IllegalArgumentException("You must either set both username and password or " +
-                                             "neither username nor password.");
+      if (!containsMacro(USERNAME) && (Strings.isNullOrEmpty(username) ^ Strings.isNullOrEmpty(password))) {
+        collector.addFailure("Both username and password must be given, or neither of them must be given.",
+                             "Leave username and password fields empty or provide values for both fields")
+          .withConfigProperty(USERNAME).withConfigProperty(PASSWORD);
       }
 
-      if (!containsMacro("sender")) {
+      if (!containsMacro(SENDER)) {
         try {
           InternetAddress[] addresses = InternetAddress.parse(sender);
           if (addresses.length == 0) {
-            throw new IllegalArgumentException("Must specify a sender email address.");
+            collector.addFailure("Sender email was not specified.", null)
+              .withConfigProperty(SENDER);
           }
           if (addresses.length > 1) {
-            throw new IllegalArgumentException(String.format(
-              "%s is an invalid sender email address. Only one sender is supported.", sender));
+            collector.addFailure(String.format("%s is an invalid sender email address. Only one sender is supported.",
+                                               sender),
+                                 "Only specify one sender email address.")
+              .withConfigProperty(SENDER);
           }
         } catch (AddressException e) {
-          throw new IllegalArgumentException(
-            String.format("%s is an invalid sender email address. Reason: %s", sender, e.getMessage()));
+          collector.addFailure(String.format("%s is an invalid sender email address. Reason: %s", sender,
+                                             e.getMessage()),
+                               null)
+            .withConfigProperty(SENDER);
         }
       }
 
-      if (!containsMacro("recipients")) {
+      if (!containsMacro(RECIPIENTS)) {
         try {
           InternetAddress.parse(recipients);
         } catch (AddressException e) {
-          throw new IllegalArgumentException(
-            String.format("%s is an invalid list of recipient email addresses. Reason: %s",
-                          recipients, e.getMessage()));
+          collector.addFailure(String.format("%s is an invalid list of recipient email addresses. Reason: %s",
+                                             recipients, e.getMessage()),
+                               "")
+            .withConfigProperty(RECIPIENTS);
         }
       }
     }
@@ -155,7 +171,8 @@ public class EmailAction extends PostAction {
     if (!config.shouldRun(context)) {
       return;
     }
-    config.validate();
+    config.validate(context.getFailureCollector());
+    context.getFailureCollector().getOrThrowException();
 
     Authenticator authenticator = null;
 
@@ -217,7 +234,10 @@ public class EmailAction extends PostAction {
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    config.validate();
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    FailureCollector collector = stageConfigurer.getFailureCollector();
+
+    config.validate(collector);
   }
 
 }
