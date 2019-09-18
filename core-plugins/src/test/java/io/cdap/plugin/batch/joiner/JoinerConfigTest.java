@@ -24,7 +24,6 @@ import com.google.common.collect.Table;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.CauseAttributes;
-import io.cdap.cdap.etl.api.validation.ValidationException;
 import io.cdap.cdap.etl.api.validation.ValidationFailure.Cause;
 import io.cdap.cdap.etl.mock.validation.MockFailureCollector;
 import org.junit.Assert;
@@ -198,12 +197,14 @@ public class JoinerConfigTest {
     Map<String, Schema> inputSchemas = ImmutableMap.of("film", filmSchema, "filmActor", filmActorSchema,
                                                        "filmCategory", filmCategorySchema);
     FailureCollector collector = new MockFailureCollector();
+    String caughtException = "";
     try {
       joiner.init(inputSchemas, collector);
       joiner.getOutputSchema(inputSchemas, collector);
-    } catch (ValidationException e) {
-      Assert.assertEquals(validationExceptionMessage, e.getMessage());
+    } catch (Exception e) {
+      caughtException = e.getMessage();
     }
+    Assert.assertEquals(validationExceptionMessage, caughtException);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
@@ -229,13 +230,15 @@ public class JoinerConfigTest {
 
     Joiner joiner = new Joiner(config);
     FailureCollector collector = new MockFailureCollector();
+    String caughtException = "";
     try {
       joiner.validateJoinKeySchemas(
           ImmutableMap.of("film", filmSchema, "filmActor", filmActorSchema,
               "filmCategory", filmCategorySchema), config.getPerStageJoinKeys(), collector);
-    } catch (ValidationException e) {
-      Assert.assertEquals(validationExceptionMessage, e.getMessage());
+    } catch (Exception e) {
+      caughtException = e.getMessage();
     }
+    Assert.assertEquals(validationExceptionMessage, caughtException);
     Assert.assertEquals(2, collector.getValidationFailures().size());
     // Assert first failure
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
@@ -284,12 +287,13 @@ public class JoinerConfigTest {
 
     Joiner joiner = new Joiner(config);
     FailureCollector collector = new MockFailureCollector();
-    // should throw IllegalArgumentException exception
+    String caughtException = "";
     try {
       joiner.getOutputSchema(inputSchemas, collector);
-    } catch (ValidationException e) {
-      Assert.assertEquals(validationExceptionMessage, e.getMessage());
+    } catch (Exception e) {
+      caughtException = e.getMessage();
     }
+    Assert.assertEquals(validationExceptionMessage, caughtException);
     Assert.assertEquals(2, collector.getValidationFailures().size());
     // Assert first failure
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());

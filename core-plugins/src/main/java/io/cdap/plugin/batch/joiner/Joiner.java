@@ -47,6 +47,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nonnull;
 
 /**
  * Batch joiner to join records from multiple inputs
@@ -227,14 +228,14 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
     return outRecordBuilder.build();
   }
 
-  void init(Map<String, Schema> inputSchemas, FailureCollector collector) {
+  void init(Map<String, Schema> inputSchemas, @Nonnull FailureCollector collector) {
     validateJoinKeySchemas(inputSchemas, conf.getPerStageJoinKeys(), collector);
     requiredInputs = conf.getInputs();
     perStageSelectedFields = conf.getPerStageSelectedFields();
   }
 
   void validateJoinKeySchemas(Map<String, Schema> inputSchemas, Map<String, List<String>> joinKeys,
-      FailureCollector collector) {
+      @Nonnull FailureCollector collector) {
     perStageJoinKeys = joinKeys;
 
     if (perStageJoinKeys.size() != inputSchemas.size()) {
@@ -275,7 +276,7 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
     collector.getOrThrowException();
   }
 
-  Schema getOutputSchema(Map<String, Schema> inputSchemas, FailureCollector collector) {
+  Schema getOutputSchema(Map<String, Schema> inputSchemas, @Nonnull FailureCollector collector) {
     validateJoinKeySchemas(inputSchemas, conf.getPerStageJoinKeys(), collector);
     requiredInputs = conf.getInputs();
     perStageSelectedFields = conf.getPerStageSelectedFields();
@@ -284,7 +285,7 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
   }
 
   private Collection<OutputFieldInfo> createOutputFieldInfos(Map<String, Schema> inputSchemas,
-      FailureCollector collector) {
+      @Nonnull FailureCollector collector) {
     validateRequiredInputs(inputSchemas, collector);
 
     // stage name to input schema
@@ -444,7 +445,7 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
     }
   }
 
-  private void validateRequiredInputs(Map<String, Schema> inputSchemas, FailureCollector collector) {
+  private void validateRequiredInputs(Map<String, Schema> inputSchemas, @Nonnull FailureCollector collector) {
     for (String requiredInput : requiredInputs) {
       if (!inputSchemas.containsKey(requiredInput)) {
         collector.addFailure(String.format("Provided input %s must be an input stage name", requiredInput), null)
