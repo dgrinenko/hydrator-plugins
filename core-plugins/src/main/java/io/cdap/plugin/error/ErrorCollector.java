@@ -25,9 +25,8 @@ import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.etl.api.Emitter;
 import io.cdap.cdap.etl.api.ErrorRecord;
 import io.cdap.cdap.etl.api.ErrorTransform;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
-import io.cdap.cdap.etl.api.validation.InvalidConfigPropertyException;
-
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -40,28 +39,37 @@ import javax.annotation.Nullable;
 public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredRecord> {
   private final Config config;
 
+  private static final String MESSAGE_FIELD = "messageField";
+  private static final String CODE_FIELD = "codeField";
+  private static final String STAGE_FIELD = "stageField";
+
   public ErrorCollector(Config config) {
     this.config = config;
   }
 
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
+    // Get failure collector for updated validation API
+    FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     Schema inputSchema = pipelineConfigurer.getStageConfigurer().getInputSchema();
     if (inputSchema != null) {
       if (config.messageField != null && inputSchema.getField(config.messageField) != null) {
-        throw new InvalidConfigPropertyException(String.format(
-          "Input schema already contains message field '%s'. Please set message field to a different value.",
-          config.messageField), "messageField");
+        collector.addFailure(
+            String.format("Input schema already contains message field '%s'.", config.messageField),
+            "Please set message field to a different value.")
+            .withConfigProperty(MESSAGE_FIELD).withInputSchemaField(config.messageField);
       }
       if (config.codeField != null && inputSchema.getField(config.codeField) != null) {
-        throw new InvalidConfigPropertyException(String.format(
-          "Input schema already contains code field '%s'. Please set code field to a different value.",
-          config.codeField), "codeField");
+        collector.addFailure(
+            String.format("Input schema already contains code field '%s'.", config.codeField),
+            "Please set code field to a different value.")
+            .withConfigProperty(CODE_FIELD).withInputSchemaField(config.codeField);
       }
       if (config.stageField != null && inputSchema.getField(config.stageField) != null) {
-        throw new InvalidConfigPropertyException(String.format(
-          "Input schema already contains stage field '%s'. Please set stage field to a different value.",
-          config.stageField), "stageField");
+        collector.addFailure(
+            String.format("Input schema already contains stage field '%s'.", config.stageField),
+            "Please set stage field to a different value.")
+            .withConfigProperty(STAGE_FIELD).withInputSchemaField(config.stageField);
       }
       Schema outputSchema = getOutputSchema(config, inputSchema);
       pipelineConfigurer.getStageConfigurer().setOutputSchema(outputSchema);
