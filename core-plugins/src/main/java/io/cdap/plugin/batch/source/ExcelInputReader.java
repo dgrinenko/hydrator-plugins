@@ -139,8 +139,9 @@ public class ExcelInputReader extends BatchSource<LongWritable, Object, Structur
         String[] columns = map.split(":");
         if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
           collector.addFailure(
-              String.format("Column: %s in 'Column-Label Mapping' must be included in 'Column To Be Extracted'"), null)
-              .withConfigElement(COLUMN_MAPPING, map);
+              String.format("Column: %s in 'Column-Label Mapping' "
+                  + "must be included in 'Column To Be Extracted'", columns[0]), null)
+          .withConfigElement(COLUMN_MAPPING, map);
         } else {
           columnMapping.put(columns[0], columns[1]);
         }
@@ -153,8 +154,8 @@ public class ExcelInputReader extends BatchSource<LongWritable, Object, Structur
         String[] columns = schema.split(":");
         if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
           collector.addFailure(
-              String.format("Column: %s in 'Field Name Schema Type "
-                  + "Mapping' must be included in 'Column To Be Extracted'"), null)
+              String.format("Column: %s in 'Field Name Schema Type Mapping' "
+                  + "must be included in 'Column To Be Extracted'", columns[0]), null)
               .withConfigElement(OUTPUT_SCHEMA, schema);
         } else {
           outputSchemaMapping.put(columns[0], columns[1]);
