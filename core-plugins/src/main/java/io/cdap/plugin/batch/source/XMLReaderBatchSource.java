@@ -17,7 +17,6 @@
 package io.cdap.plugin.batch.source;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.gson.Gson;
@@ -35,6 +34,7 @@ import io.cdap.cdap.api.dataset.lib.CloseableIterator;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
 import io.cdap.cdap.api.dataset.lib.KeyValueTable;
 import io.cdap.cdap.etl.api.Emitter;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.batch.BatchSourceContext;
@@ -80,6 +80,15 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
   private static final Gson GSON = new Gson();
   private static final Type ARRAYLIST_PREPROCESSED_FILES  = new TypeToken<ArrayList<String>>() { }.getType();
 
+  private static final String PATH = "path";
+  private static final String PATTERN = "pattern";
+  private static final String NODE_PATH = "nodePath";
+  private static final String TABLE_EXPIRY_PERIOD = "tableExpiryPeriod";
+  private static final String TARGET_FOLDER = "targetFolder";
+  private static final String TEMPORARY_FOLDER = "temporaryFolder";
+  private static final String ACTION_AFTER_PROCESS = "actionAfterProcess";
+  private static final String REPROCESSING_REQUIRED = "reprocessingRequired";
+
   public static final Schema DEFAULT_XML_SCHEMA = Schema.recordOf(
     "xmlSchema",
     Schema.Field.of("offset", Schema.of(Schema.Type.LONG)),
@@ -106,7 +115,7 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
-    config.validate();
+    config.validate(pipelineConfigurer.getStageConfigurer().getFailureCollector());
     pipelineConfigurer.getStageConfigurer().setOutputSchema(DEFAULT_XML_SCHEMA);
     if (!config.containsMacro("tableName") && !Strings.isNullOrEmpty(config.tableName)) {
       pipelineConfigurer.createDataset(config.tableName, KeyValueTable.class.getName());
@@ -115,7 +124,7 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
 
   @Override
   public void prepareRun(BatchSourceContext context) throws Exception {
-    config.validate();
+    config.validate(context.getFailureCollector());
     // Create dataset if macros were provided at configure time
     if (!Strings.isNullOrEmpty(config.tableName) && !context.datasetExists(config.tableName)) {
       context.createDataset(config.tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
@@ -317,46 +326,62 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
       return nodePath;
     }
 
-    void validate() {
-      if (!containsMacro("path")) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(path), "Path cannot be empty.");
+    void validate(FailureCollector collector) {
+      if (!containsMacro(PATH) && Strings.isNullOrEmpty(path)) {
+        collector.addFailure("Path cannot be empty.", null).withConfigProperty(PATH);
       }
-      if (!containsMacro("nodePath")) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(nodePath), "Node path cannot be empty.");
-      }
-
-      if (!containsMacro("tableExpiryPeriod") && tableExpiryPeriod != null && tableExpiryPeriod < 0) {
-        throw new IllegalArgumentException("Value for Table expiry period should either be empty or greater than 0.");
+      if (!containsMacro(NODE_PATH) && Strings.isNullOrEmpty(nodePath)) {
+        collector.addFailure("Node path cannot be empty.", null).withConfigProperty(NODE_PATH);
       }
 
-      if (!containsMacro("temporaryFolder")) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(temporaryFolder), "Temporary folder cannot be empty.");
+      if (!containsMacro(TABLE_EXPIRY_PERIOD) && tableExpiryPeriod != null && tableExpiryPeriod < 0) {
+        collector.addFailure(String.format("Invalid value: %d.", tableExpiryPeriod),
+            "Value for 'Table Expiry Period' should either be empty or greater than 0")
+            .withConfigProperty(TABLE_EXPIRY_PERIOD);
       }
 
-      boolean onlyOneActionRequired = !actionAfterProcess.equalsIgnoreCase("NONE") && isReprocessingRequired();
-      Preconditions.checkArgument(!onlyOneActionRequired, "Please select either 'After Processing Action' or " +
-        "'Reprocessing Required'; both cannot be applied at the same time.");
+      if (!containsMacro(TEMPORARY_FOLDER) && Strings.isNullOrEmpty(temporaryFolder)) {
+        collector.addFailure("Temporary folder cannot be empty.", null)
+            .withConfigProperty(TEMPORARY_FOLDER);
+      }
 
-      boolean targetFolderEmpty = (actionAfterProcess.equalsIgnoreCase("ARCHIVE") ||
-        actionAfterProcess.equalsIgnoreCase("MOVE")) && Strings.isNullOrEmpty(targetFolder);
-      Preconditions.checkArgument(!targetFolderEmpty, "Target folder cannot be empty for Action = '" +
-        actionAfterProcess + "'.");
+      boolean onlyOneActionRequired = !Strings.isNullOrEmpty(actionAfterProcess)
+          && !actionAfterProcess.equalsIgnoreCase("NONE")
+          && isReprocessingRequired();
+      if (onlyOneActionRequired) {
+        collector.addFailure("Only one of 'After Processing Action' or 'Reprocessing Required' "
+            + "may be selected at a time.", null)
+            .withConfigProperty(ACTION_AFTER_PROCESS).withConfigProperty(REPROCESSING_REQUIRED);
+      }
+
+      boolean targetFolderEmpty = Strings.isNullOrEmpty(targetFolder)
+          && (!Strings.isNullOrEmpty(actionAfterProcess)
+          && (actionAfterProcess.equalsIgnoreCase("ARCHIVE")
+          || actionAfterProcess.equalsIgnoreCase("MOVE")));
+      if (targetFolderEmpty) {
+        collector.addFailure(
+            String.format("Target folder cannot be empty for Action = '%s'.", actionAfterProcess), null)
+            .withConfigProperty(TARGET_FOLDER);
+      }
 
       if (!Strings.isNullOrEmpty(pattern)) {
         try {
           Pattern.compile(pattern);
         } catch (Exception e) {
-          throw new IllegalArgumentException(String.format("The regular expression '%s' is not valid.", pattern), e);
+          collector.addFailure(
+              String.format("Invalid regular expression: '%s'.", pattern), null)
+              .withConfigProperty(PATTERN);
         }
         // By default, the Hadoop FileInputFormat won't return any files when using a regex pattern unless the path
         // has globs in it. Checking for that scenario.
         if (path.endsWith("/") ||
           !(path.contains("*") || path.contains("?") || path.contains("{") || path.contains("["))) {
-          throw new IllegalArgumentException("When filtering with regular expressions, " +
-                                               "the path must be a directory and leverage glob syntax. Usually " +
-                                               "the folder path needs to end with '/*'.");
+          collector.addFailure("When filtering with regular expressions, the path must "
+              + "be a directory and leverage glob syntax.", "Usually the folder path needs "
+              + "to end with '/*'.").withConfigProperty(PATH).withConfigProperty(PATTERN);
         }
       }
+      collector.getOrThrowException();
     }
   }
 }
