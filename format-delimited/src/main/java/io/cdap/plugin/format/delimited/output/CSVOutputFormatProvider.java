@@ -19,9 +19,9 @@ package io.cdap.plugin.format.delimited.output;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +32,7 @@ import java.util.Map;
 @Plugin(type = "outputformat")
 @Name(CSVOutputFormatProvider.NAME)
 @Description(CSVOutputFormatProvider.DESC)
-public class CSVOutputFormatProvider implements OutputFormatProvider {
+public class CSVOutputFormatProvider extends AbstractOutputFormatProvider {
   public static final PluginClass PLUGIN_CLASS = getPluginClass();
   static final String NAME = "csv";
   static final String DESC = "Plugin for writing files in csv format.";

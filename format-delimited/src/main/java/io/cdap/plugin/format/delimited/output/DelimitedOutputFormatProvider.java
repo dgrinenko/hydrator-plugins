@@ -20,10 +20,10 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
 @Plugin(type = "outputformat")
 @Name(DelimitedOutputFormatProvider.NAME)
 @Description(DelimitedOutputFormatProvider.DESC)
-public class DelimitedOutputFormatProvider implements OutputFormatProvider {
+public class DelimitedOutputFormatProvider extends AbstractOutputFormatProvider {
   public static final PluginClass PLUGIN_CLASS = getPluginClass();
   static final String NAME = "delimited";
   static final String DESC = "Plugin for writing files in delimited format.";

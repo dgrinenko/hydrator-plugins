@@ -20,11 +20,11 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 import org.apache.parquet.format.CompressionCodec;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ import javax.annotation.Nullable;
 @Plugin(type = "outputformat")
 @Name(ParquetOutputFormatProvider.NAME)
 @Description(ParquetOutputFormatProvider.DESC)
-public class ParquetOutputFormatProvider implements OutputFormatProvider {
+public class ParquetOutputFormatProvider extends AbstractOutputFormatProvider {
   public static final PluginClass PLUGIN_CLASS = getPluginClass();
   static final String SCHEMA_KEY = "parquet.avro.schema";
   static final String NAME = "parquet";

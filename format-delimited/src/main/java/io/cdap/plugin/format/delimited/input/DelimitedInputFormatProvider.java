@@ -20,8 +20,11 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
+import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.cdap.etl.api.FailureCollector;
+import io.cdap.cdap.etl.api.validation.FormatContext;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
@@ -59,6 +62,16 @@ public class DelimitedInputFormatProvider extends PathTrackingInputFormatProvide
   }
 
   @Override
+  public void validate(FormatContext context) {
+    Schema schema = super.getSchema(context);
+    FailureCollector collector = context.getFailureCollector();
+    if (schema == null) {
+      collector.addFailure("Delimited format cannot be used without specifying a schema.",
+                           "Schema must be specified.").withConfigProperty("schema");
+    }
+  }
+
+  @Override
   protected void addFormatProperties(Map<String, String> properties) {
     properties.put(PathTrackingDelimitedInputFormat.DELIMITER, conf.delimiter == null ? "," : conf.delimiter);
   }
@@ -74,7 +87,6 @@ public class DelimitedInputFormatProvider extends PathTrackingInputFormatProvide
     @Description(DELIMITER_DESC)
     private String delimiter;
   }
-
 
   private static PluginClass getPluginClass() {
     Map<String, PluginPropertyField> properties = new HashMap<>(PathTrackingConfig.FIELDS);

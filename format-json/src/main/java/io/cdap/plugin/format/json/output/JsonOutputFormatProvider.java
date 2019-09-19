@@ -19,9 +19,9 @@ package io.cdap.plugin.format.json.output;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,7 +33,7 @@ import java.util.Map;
 @Plugin(type = "outputformat")
 @Name(JsonOutputFormatProvider.NAME)
 @Description(JsonOutputFormatProvider.DESC)
-public class JsonOutputFormatProvider implements OutputFormatProvider {
+public class JsonOutputFormatProvider extends AbstractOutputFormatProvider {
   public static final PluginClass PLUGIN_CLASS = getPluginClass();
   static final String NAME = "json";
   static final String DESC = "Plugin for writing files in json format.";

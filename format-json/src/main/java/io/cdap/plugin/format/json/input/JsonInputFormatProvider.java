@@ -19,7 +19,10 @@ package io.cdap.plugin.format.json.input;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
+import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
+import io.cdap.cdap.etl.api.FailureCollector;
+import io.cdap.cdap.etl.api.validation.FormatContext;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
@@ -49,6 +52,16 @@ public class JsonInputFormatProvider extends PathTrackingInputFormatProvider<Pat
   protected void validate() {
     if (conf.getSchema() == null) {
       throw new IllegalArgumentException("Json format cannot be used without specifying a schema.");
+    }
+  }
+
+  @Override
+  public void validate(FormatContext context) {
+    Schema schema = super.getSchema(context);
+    FailureCollector collector = context.getFailureCollector();
+    if (schema == null) {
+      collector.addFailure("Json format cannot be used without specifying a schema.", "Schema must be specified.")
+        .withConfigProperty("schema");
     }
   }
 }

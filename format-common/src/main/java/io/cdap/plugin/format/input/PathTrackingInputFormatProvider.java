@@ -16,17 +16,23 @@
 
 package io.cdap.plugin.format.input;
 
-import io.cdap.cdap.api.data.batch.InputFormatProvider;
+import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.etl.api.FailureCollector;
+import io.cdap.cdap.etl.api.validation.FormatContext;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormatProvider;
 
 import java.util.HashMap;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Base class for input format plugins that support tracking which file their record came from.
  *
  * @param <T> type of plugin config
  */
-public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConfig> implements InputFormatProvider {
+public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConfig>
+  implements ValidatingInputFormatProvider {
+  private static final String NAME_SCHEMA = "schema";
   protected T conf;
 
   protected PathTrackingInputFormatProvider(T conf) {
@@ -35,7 +41,6 @@ public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConf
 
   @Override
   public Map<String, String> getInputFormatConfiguration() {
-    validate();
     Map<String, String> properties = new HashMap<>();
     if (conf.getPathField() != null) {
       properties.put(PathTrackingInputFormat.PATH_FIELD, conf.getPathField());
@@ -51,9 +56,28 @@ public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConf
 
   /**
    * Perform validation on the provided configuration.
+   *
+   * Deprecated since 2.3.0. Use PathTrackingConfig#validate method instead.
    */
+  @Deprecated
   protected void validate() {
     // no-op
+  }
+
+  public void validate(FormatContext context) {
+    getSchema(context);
+  }
+
+  @Nullable
+  @Override
+  public Schema getSchema(FormatContext context) {
+    FailureCollector collector = context.getFailureCollector();
+    try {
+      return conf.getSchema();
+    } catch (Exception e) {
+      collector.addFailure(e.getMessage(), null).withConfigProperty(NAME_SCHEMA).withStacktrace(e.getStackTrace());
+    }
+    throw collector.getOrThrowException();
   }
 
   /**

@@ -55,5 +55,4 @@ public class AvroInputFormatProvider extends PathTrackingInputFormatProvider<Pat
       properties.put("avro.schema.input.key", schema.toString());
     }
   }
-
 }

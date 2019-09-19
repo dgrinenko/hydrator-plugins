@@ -20,12 +20,12 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.data.schema.UnsupportedTypeException;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
 import io.cdap.plugin.common.HiveSchemaConverter;
+import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 import org.apache.orc.CompressionKind;
 
 import java.io.IOException;
@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
 @Plugin(type = "outputformat")
 @Name(OrcOutputFormatProvider.NAME)
 @Description(OrcOutputFormatProvider.DESC)
-public class OrcOutputFormatProvider implements OutputFormatProvider {
+public class OrcOutputFormatProvider extends AbstractOutputFormatProvider {
   public static final PluginClass PLUGIN_CLASS = getPluginClass();
   static final String NAME = "orc";
   static final String DESC = "Plugin for writing files in orc format.";
