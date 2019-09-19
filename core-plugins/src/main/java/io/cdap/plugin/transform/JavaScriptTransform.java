@@ -78,6 +78,9 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
   private static final String VARIABLE_NAME = "dont_name_your_variable_this";
   private static final String EMITTER_NAME = "dont_name_your_variable2_this";
   private static final String CONTEXT_NAME = "dont_name_your_context_this";
+  private static final String LOOKUP = "lookup";
+  private static final String SCHEMA = "schema";
+  private static final String SCRIPT = "script";
   private ScriptEngine engine;
   private Invocable invocable;
   private Schema schema;
@@ -197,8 +200,7 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
   public void transform(StructuredRecord input, Emitter<StructuredRecord> emitter) {
     try {
       engine.eval(String.format("var %s = %s;", VARIABLE_NAME, GSON.toJson(input)));
-      Emitter<Map> jsEmitter = new JSEmitter(emitter,
-          schema == null ? input.getSchema() : schema, getContext().getFailureCollector());
+      Emitter<Map> jsEmitter = new JSEmitter(emitter, schema == null ? input.getSchema() : schema);
       engine.put(EMITTER_NAME, jsEmitter);
       invocable.invokeFunction(FUNCTION_NAME);
     } catch (Exception e) {
@@ -213,17 +215,15 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
 
     private final Emitter<StructuredRecord> emitter;
     private final Schema schema;
-    private final FailureCollector collector;
 
-    public JSEmitter(Emitter<StructuredRecord> emitter, Schema schema, FailureCollector collector) {
+    public JSEmitter(Emitter<StructuredRecord> emitter, Schema schema) {
       this.emitter = emitter;
       this.schema = schema;
-      this.collector = collector;
     }
 
     @Override
     public void emit(Map value) {
-      emitter.emit(decodeRecord(value, schema, collector));
+      emitter.emit(decodeRecord(value, schema));
     }
 
     @Override
@@ -234,18 +234,17 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
     @Override
     public void emitError(InvalidEntry<Map> invalidEntry) {
       emitter.emitError(new InvalidEntry<>(invalidEntry.getErrorCode(), invalidEntry.getErrorMsg(),
-                                           decodeRecord(invalidEntry.getInvalidRecord(), errSchema, collector)));
+                                           decodeRecord(invalidEntry.getInvalidRecord(), errSchema)));
     }
 
     public void emitError(Map invalidEntry) {
       emitter.emitError(
           getErrorObject(invalidEntry,
-              decodeRecord((Map) invalidEntry.get("invalidRecord"), errSchema, collector), collector));
+              decodeRecord((Map) invalidEntry.get("invalidRecord"), errSchema)));
     }
   }
 
-  private InvalidEntry<StructuredRecord> getErrorObject(Map result, StructuredRecord input,
-      FailureCollector collector) {
+  private InvalidEntry<StructuredRecord> getErrorObject(Map result, StructuredRecord input) {
     Preconditions.checkState(result.containsKey("errorCode"));
 
     Object errorCode = result.get("errorCode");
@@ -263,14 +262,12 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
                                "errorCode must be a valid Integer");
       errorCodeInt = errorCodeDouble.intValue();
     } else {
-      collector.addFailure(String.format("Unsupported errorCode type: %s", errorCode.getClass().getName()),
-          "Ensure the passed in errorCode type is supported").withConfigProperty("script");
-      throw collector.getOrThrowException();
+      throw new IllegalArgumentException("Unsupported errorCode type: " + errorCode.getClass().getName());
     }
     return new InvalidEntry<>(errorCodeInt, (String) result.get("errorMsg"), input);
   }
 
-  private Object decode(Object object, Schema schema, FailureCollector collector) {
+  private Object decode(Object object, Schema schema) {
     Schema.Type type = schema.getType();
 
     switch (type) {
@@ -282,52 +279,50 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
       case DOUBLE:
       case BYTES:
       case STRING:
-        return decodeSimpleType(object, schema, collector);
+        return decodeSimpleType(object, schema);
       case ENUM:
         break;
       case ARRAY:
-        return decodeArray(jsObject2List(object, collector), schema.getComponentSchema(), collector);
+        return decodeArray(jsObject2List(object), schema.getComponentSchema());
       case MAP:
         Schema keySchema = schema.getMapSchema().getKey();
         Schema valSchema = schema.getMapSchema().getValue();
         // Should be fine to cast since schema tells us what it is.
         //noinspection unchecked
-        return decodeMap((Map<Object, Object>) object, keySchema, valSchema, collector);
+        return decodeMap((Map<Object, Object>) object, keySchema, valSchema);
       case RECORD:
-        return decodeRecord((Map) object, schema, collector);
+        return decodeRecord((Map) object, schema);
       case UNION:
-        return decodeUnion(object, schema.getUnionSchemas(), collector);
+        return decodeUnion(object, schema.getUnionSchemas());
     }
 
     throw new RuntimeException("Unable decode object with schema " + schema);
   }
 
-  private StructuredRecord decodeRecord(Map nativeObject, Schema schema, FailureCollector collector) {
+  private StructuredRecord decodeRecord(Map nativeObject, Schema schema) {
     StructuredRecord.Builder builder = StructuredRecord.builder(schema);
     for (Schema.Field field : schema.getFields()) {
       String fieldName = field.getName();
       Object fieldVal = nativeObject.get(fieldName);
-      builder.set(fieldName, decode(fieldVal, field.getSchema(), collector));
+      builder.set(fieldName, decode(fieldVal, field.getSchema()));
     }
     return builder.build();
   }
 
-  private List jsObject2List(Object object, FailureCollector collector) {
+  private List jsObject2List(Object object) {
     if (somValuesMethod != null) {
       // using Nashorn (Java 8+) -- convert ScriptObjectMirror to List
       try {
         return (List) somValuesMethod.invoke(object);
       } catch (InvocationTargetException | IllegalAccessException | ClassCastException e) {
-        collector.addFailure("Failed to convert ScriptObjectMirror to List",
-            "Ensure ScriptObjectMirror can be converted to List").withConfigProperty("script");
-        throw collector.getOrThrowException();
+        throw new RuntimeException("Failed to convert ScriptObjectMirror to List", e);
       }
     }
     return (List) object;
   }
 
   @SuppressWarnings("RedundantCast")
-  private Object decodeSimpleType(Object object, Schema schema, FailureCollector collector) {
+  private Object decodeSimpleType(Object object, Schema schema) {
     Schema.Type type = schema.getType();
     switch (type) {
       case NULL:
@@ -340,7 +335,7 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
       case FLOAT:
         return ((Number) object).floatValue();
       case BYTES:
-        List byteArr = jsObject2List(object, collector);
+        List byteArr = jsObject2List(object);
         byte[] output = new byte[byteArr.size()];
         for (int i = 0; i < output.length; i++) {
           // everything is a number
@@ -356,40 +351,34 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
       case STRING:
         return (String) object;
     }
-    collector.addFailure(
-        String.format("Unable to decode object with schema %s", schema),
-        "Ensure the object can be decoded with the input schema").withConfigProperty("script");
-    throw collector.getOrThrowException();
+    throw new RuntimeException("Unable decode object with schema " + schema);
   }
 
-  private Map<Object, Object> decodeMap(Map<Object, Object> object, Schema keySchema, Schema valSchema,
-      FailureCollector collector) {
+  private Map<Object, Object> decodeMap(Map<Object, Object> object, Schema keySchema, Schema valSchema) {
     Map<Object, Object> output = Maps.newHashMap();
     for (Map.Entry<Object, Object> entry : object.entrySet()) {
-      output.put(decode(entry.getKey(), keySchema, collector), decode(entry.getValue(), valSchema, collector));
+      output.put(decode(entry.getKey(), keySchema), decode(entry.getValue(), valSchema));
     }
     return output;
   }
 
-  private List<Object> decodeArray(List nativeArray, Schema componentSchema, FailureCollector collector) {
+  private List<Object> decodeArray(List nativeArray, Schema componentSchema) {
     List<Object> arr = Lists.newArrayListWithCapacity(nativeArray.size());
     for (Object arrObj : nativeArray) {
-      arr.add(decode(arrObj, componentSchema, collector));
+      arr.add(decode(arrObj, componentSchema));
     }
     return arr;
   }
 
-  private Object decodeUnion(Object object, List<Schema> schemas, FailureCollector collector) {
+  private Object decodeUnion(Object object, List<Schema> schemas) {
     for (Schema schema : schemas) {
       try {
-        return decode(object, schema, collector);
+        return decode(object, schema);
       } catch (Exception e) {
         // could be ok, just move on and try the next schema
       }
     }
-    collector.addFailure(String.format("Unable to decode union with schema %s", schemas),
-        "Ensure the provided schema can be used to decode the union").withConfigProperty("script");
-    throw collector.getOrThrowException();
+    throw new RuntimeException("Unable decode union with schema " + schemas);
   }
 
   private void init(@Nullable TransformContext context, FailureCollector collector) {
@@ -399,7 +388,7 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
       engine.eval(ScriptConstants.HELPER_DEFINITION);
     } catch (ScriptException e) {
       // shouldn't happen
-      collector.addFailure("Couldn't define helper functions", "Something went wrong");
+      collector.addFailure("Failed to define helper functions.", null);
       throw collector.getOrThrowException();
     }
 
@@ -410,9 +399,9 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
     try {
       lookupConfig = GSON.fromJson(config.lookup, LookupConfig.class);
     } catch (JsonSyntaxException e) {
-      collector.addFailure("Invalid lookup config. Expected map of string to string",
-          "Ensure the provided lookup config is valid JSON in the form of a string to string map")
-          .withConfigProperty("lookup");
+      collector.addFailure("Invalid lookup config.",
+          "Expected JSON map of string to string.")
+          .withConfigProperty(LOOKUP);
       throw collector.getOrThrowException();
     }
 
@@ -430,17 +419,16 @@ public class JavaScriptTransform extends Transform<StructuredRecord, StructuredR
       engine.eval(script);
     } catch (ScriptException e) {
       collector.addFailure(
-          String.format("Invalid script: %s", e.getMessage()),
-          "Ensure the input script is valid")
-          .withConfigProperty("script");
+          String.format("Invalid script: %s.", e.getMessage()), null)
+          .withConfigProperty(SCRIPT);
     }
     invocable = (Invocable) engine;
     if (config.schema != null) {
       try {
         schema = Schema.parseJson(config.schema);
       } catch (IOException e) {
-        collector.addFailure(String.format("Unable to parse schema: %s", e.getMessage()),
-            "Ensure the output schema is JSON parseable").withConfigProperty("schema");
+        collector.addFailure(String.format("Invalid schema: %s.", e.getMessage()),
+            "Output schema must be JSON parseable.").withConfigProperty(SCHEMA);
       }
     }
     collector.getOrThrowException();
