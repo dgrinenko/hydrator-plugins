@@ -80,7 +80,7 @@ public abstract class AbstractFileSinkConfig extends PluginConfig implements Fil
       try {
         new SimpleDateFormat(suffix);
       } catch (IllegalArgumentException e) {
-        collector.addFailure(String.format("Invalid suffix: %s", e.getMessage()), "Ensure provided suffix is valid.")
+        collector.addFailure("Invalid suffix.", "Ensure provided suffix is valid.")
           .withConfigProperty(NAME_SUFFIX).withStacktrace(e.getStackTrace());
       }
     }
