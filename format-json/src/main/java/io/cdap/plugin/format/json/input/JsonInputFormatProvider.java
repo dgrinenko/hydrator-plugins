@@ -23,20 +23,21 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.FormatContext;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
 /**
  * Reads json into StructuredRecords.
  */
-@Plugin(type = "inputformat")
+@Plugin(type = ValidatingInputFormat.PLUGIN_TYPE)
 @Name(JsonInputFormatProvider.NAME)
 @Description(JsonInputFormatProvider.DESC)
 public class JsonInputFormatProvider extends PathTrackingInputFormatProvider<PathTrackingConfig> {
   static final String NAME = "json";
   static final String DESC = "Plugin for reading files in json format.";
   public static final PluginClass PLUGIN_CLASS =
-    new PluginClass("inputformat", NAME, DESC, JsonInputFormatProvider.class.getName(),
+    new PluginClass(ValidatingInputFormat.PLUGIN_TYPE, NAME, DESC, JsonInputFormatProvider.class.getName(),
                     "conf", PathTrackingConfig.FIELDS);
 
   public JsonInputFormatProvider(PathTrackingConfig conf) {

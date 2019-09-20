@@ -46,7 +46,7 @@ public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConf
       properties.put(PathTrackingInputFormat.FILENAME_ONLY, String.valueOf(conf.useFilenameOnly()));
     }
     if (conf.getSchema() != null) {
-      properties.put("schema", conf.getSchema().toString());
+      properties.put(NAME_SCHEMA, conf.getSchema().toString());
     }
 
     addFormatProperties(properties);
@@ -56,7 +56,7 @@ public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConf
   /**
    * Perform validation on the provided configuration.
    *
-   * Deprecated since 2.3.0. Use PathTrackingConfig#validate method instead.
+   * Deprecated since 2.3.0. Use {@link PathTrackingInputFormatProvider#validate(FormatContext)} method instead.
    */
   @Deprecated
   protected void validate() {

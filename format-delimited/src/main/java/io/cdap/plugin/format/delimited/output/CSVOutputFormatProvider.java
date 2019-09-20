@@ -21,6 +21,7 @@ import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.HashMap;
@@ -29,7 +30,7 @@ import java.util.Map;
 /**
  * Output format plugin for csv.
  */
-@Plugin(type = "outputformat")
+@Plugin(type = ValidatingOutputFormat.PLUGIN_TYPE)
 @Name(CSVOutputFormatProvider.NAME)
 @Description(CSVOutputFormatProvider.DESC)
 public class CSVOutputFormatProvider extends AbstractOutputFormatProvider {
@@ -49,7 +50,7 @@ public class CSVOutputFormatProvider extends AbstractOutputFormatProvider {
 
   private static PluginClass getPluginClass() {
     Map<String, PluginPropertyField> properties = new HashMap<>();
-    return new PluginClass("outputformat", NAME, DESC, CSVOutputFormatProvider.class.getName(),
+    return new PluginClass(ValidatingOutputFormat.PLUGIN_TYPE, NAME, DESC, CSVOutputFormatProvider.class.getName(),
                            null, properties);
   }
 }

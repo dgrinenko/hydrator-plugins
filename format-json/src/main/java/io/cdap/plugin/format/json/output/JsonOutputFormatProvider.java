@@ -21,6 +21,7 @@ import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.Collections;
@@ -30,7 +31,7 @@ import java.util.Map;
 /**
  * Output format plugin for json.
  */
-@Plugin(type = "outputformat")
+@Plugin(type = ValidatingOutputFormat.PLUGIN_TYPE)
 @Name(JsonOutputFormatProvider.NAME)
 @Description(JsonOutputFormatProvider.DESC)
 public class JsonOutputFormatProvider extends AbstractOutputFormatProvider {
@@ -50,7 +51,7 @@ public class JsonOutputFormatProvider extends AbstractOutputFormatProvider {
 
   private static PluginClass getPluginClass() {
     Map<String, PluginPropertyField> properties = new HashMap<>();
-    return new PluginClass("outputformat", NAME, DESC, JsonOutputFormatProvider.class.getName(),
+    return new PluginClass(ValidatingOutputFormat.PLUGIN_TYPE, NAME, DESC, JsonOutputFormatProvider.class.getName(),
                            null, properties);
   }
 }

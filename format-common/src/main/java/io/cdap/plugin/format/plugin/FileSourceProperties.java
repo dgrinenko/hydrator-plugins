@@ -37,7 +37,7 @@ public interface FileSourceProperties {
    * Validates the properties.
    *
    * @throws IllegalArgumentException if anything is invalid
-   * Deprecated since 2.3.0
+   * Deprecated since 2.3.0. Use {@link FileSourceProperties#validate(FailureCollector)} method instead.
    */
   @Deprecated
   void validate();
@@ -64,7 +64,6 @@ public interface FileSourceProperties {
   /**
    * Get the format of the data to read.
    */
-  @Nullable
   FileFormat getFormat();
 
   /**

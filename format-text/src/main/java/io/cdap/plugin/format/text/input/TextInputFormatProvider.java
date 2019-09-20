@@ -23,6 +23,7 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.FormatContext;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
@@ -34,14 +35,14 @@ import javax.annotation.Nullable;
 /**
  * Input reading logic for text files.
  */
-@Plugin(type = "inputformat")
+@Plugin(type = ValidatingInputFormat.PLUGIN_TYPE)
 @Name(TextInputFormatProvider.NAME)
 @Description(TextInputFormatProvider.DESC)
 public class TextInputFormatProvider extends PathTrackingInputFormatProvider<TextInputFormatProvider.TextConfig> {
   static final String NAME = "text";
   static final String DESC = "Plugin for reading files in text format.";
   public static final PluginClass PLUGIN_CLASS =
-    new PluginClass("inputformat", NAME, DESC, TextInputFormatProvider.class.getName(),
+    new PluginClass(ValidatingInputFormat.PLUGIN_TYPE, NAME, DESC, TextInputFormatProvider.class.getName(),
                     "conf", PathTrackingConfig.FIELDS);
 
   public TextInputFormatProvider(TextConfig conf) {

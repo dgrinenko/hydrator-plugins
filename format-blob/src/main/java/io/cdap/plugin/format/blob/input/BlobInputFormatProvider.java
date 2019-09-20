@@ -23,6 +23,7 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.FormatContext;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
@@ -33,14 +34,14 @@ import java.util.List;
 /**
  * Reads the entire contents of a File into a single record
  */
-@Plugin(type = "inputformat")
+@Plugin(type = ValidatingInputFormat.PLUGIN_TYPE)
 @Name(BlobInputFormatProvider.NAME)
 @Description(BlobInputFormatProvider.DESC)
 public class BlobInputFormatProvider extends PathTrackingInputFormatProvider<BlobInputFormatProvider.BlobConfig> {
   static final String NAME = "blob";
   static final String DESC = "Plugin for reading files in blob format.";
   public static final PluginClass PLUGIN_CLASS =
-    new PluginClass("inputformat", NAME, DESC, BlobInputFormatProvider.class.getName(),
+    new PluginClass(ValidatingInputFormat.PLUGIN_TYPE, NAME, DESC, BlobInputFormatProvider.class.getName(),
                     "conf", PathTrackingConfig.FIELDS);
 
   public BlobInputFormatProvider(BlobConfig conf) {

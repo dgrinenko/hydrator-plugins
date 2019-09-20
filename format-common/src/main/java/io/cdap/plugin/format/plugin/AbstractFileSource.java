@@ -76,18 +76,16 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     config.validate(collector);
 
-    FileFormat fileFormat = getFileFormat();
+    FileFormat fileFormat = config.getFormat();
     Schema schema = null;
-    if (fileFormat != null) {
-      ValidatingInputFormat validatingInputFormat =
-        pipelineConfigurer.usePlugin("inputformat", fileFormat.name().toLowerCase(), FORMAT_PLUGIN_ID,
-                                     config.getProperties());
-      FormatContext context = new FormatContext(collector, null);
-      validateInputFormatProvider(context, fileFormat, validatingInputFormat);
+    ValidatingInputFormat validatingInputFormat =
+      pipelineConfigurer.usePlugin(ValidatingInputFormat.PLUGIN_TYPE, fileFormat.name().toLowerCase(), FORMAT_PLUGIN_ID,
+                                   config.getProperties());
+    FormatContext context = new FormatContext(collector, null);
+    validateInputFormatProvider(context, fileFormat, validatingInputFormat);
 
-      if (validatingInputFormat != null) {
-        schema = validatingInputFormat.getSchema(context);
-      }
+    if (validatingInputFormat != null) {
+      schema = validatingInputFormat.getSchema(context);
     }
 
     validatePathField(collector, schema);
@@ -99,12 +97,10 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
     FailureCollector collector = context.getFailureCollector();
     config.validate(collector);
     ValidatingInputFormat validatingInputFormat = context.newPluginInstance(FORMAT_PLUGIN_ID);
-    FileFormat fileFormat = getFileFormat();
-    if (fileFormat != null) {
-      FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
-      validateInputFormatProvider(formatContext, fileFormat, validatingInputFormat);
-      validatePathField(collector, validatingInputFormat.getSchema(formatContext));
-    }
+    FileFormat fileFormat = config.getFormat();
+    FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
+    validateInputFormatProvider(formatContext, fileFormat, validatingInputFormat);
+    validatePathField(collector, validatingInputFormat.getSchema(formatContext));
     collector.getOrThrowException();
 
 
@@ -192,7 +188,7 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
     if (validatingInputFormat == null) {
       collector.addFailure(
         String.format("Could not find the '%s' input format.", fileFormat.name().toLowerCase()), null)
-        .withPluginNotFound(FORMAT_PLUGIN_ID, fileFormat.name().toLowerCase(), "inputformat");
+        .withPluginNotFound(FORMAT_PLUGIN_ID, fileFormat.name().toLowerCase(), ValidatingInputFormat.PLUGIN_TYPE);
     } else {
       validatingInputFormat.validate(context);
     }
@@ -218,18 +214,5 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
           .withOutputSchemaField(schemaPathField.getName());
       }
     }
-  }
-
-  /**
-   * Returns configured file format.
-   */
-  @Nullable
-  private FileFormat getFileFormat() {
-    try {
-      return config.getFormat();
-    } catch (IllegalArgumentException e) {
-      // ignore
-    }
-    return null;
   }
 }

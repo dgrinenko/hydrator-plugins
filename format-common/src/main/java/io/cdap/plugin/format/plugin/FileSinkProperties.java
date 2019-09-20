@@ -35,7 +35,7 @@ public interface FileSinkProperties {
    * Validates the properties.
    *
    * @throws IllegalArgumentException if anything is invalid
-   * Deprecated since 2.3.0
+   * Deprecated since 2.3.0. Use {@link FileSinkProperties#validate(FailureCollector)} method instead.
    */
   @Deprecated
   void validate();

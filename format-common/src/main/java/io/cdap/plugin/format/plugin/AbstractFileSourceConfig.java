@@ -51,8 +51,6 @@ public abstract class AbstractFileSourceConfig extends PluginConfig implements F
     + "the regular expression syntax.")
   private String fileRegex;
 
-  @Macro
-  @Nullable
   @Description("Format of the data to read. Supported formats are 'avro', 'blob', 'csv', 'delimited', 'json', "
     + "'parquet', 'text', or 'tsv'. ")
   private String format;
@@ -148,7 +146,7 @@ public abstract class AbstractFileSourceConfig extends PluginConfig implements F
 
   @Override
   public FileFormat getFormat() {
-    return containsMacro(NAME_FORMAT) || Strings.isNullOrEmpty(format) ? null : FileFormat.from(format, x -> true);
+    return FileFormat.from(format, x -> true);
   }
 
   @Nullable

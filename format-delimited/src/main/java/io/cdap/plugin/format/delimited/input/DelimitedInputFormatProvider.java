@@ -25,6 +25,7 @@ import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.FormatContext;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 import io.cdap.plugin.format.input.PathTrackingConfig;
 import io.cdap.plugin.format.input.PathTrackingInputFormatProvider;
 
@@ -35,7 +36,7 @@ import javax.annotation.Nullable;
 /**
  * Reads delimited text into StructuredRecords.
  */
-@Plugin(type = "inputformat")
+@Plugin(type = ValidatingInputFormat.PLUGIN_TYPE)
 @Name(DelimitedInputFormatProvider.NAME)
 @Description(DelimitedInputFormatProvider.DESC)
 public class DelimitedInputFormatProvider extends PathTrackingInputFormatProvider<DelimitedInputFormatProvider.Conf> {
@@ -91,7 +92,7 @@ public class DelimitedInputFormatProvider extends PathTrackingInputFormatProvide
   private static PluginClass getPluginClass() {
     Map<String, PluginPropertyField> properties = new HashMap<>(PathTrackingConfig.FIELDS);
     properties.put("delimiter", new PluginPropertyField("delimiter", Conf.DELIMITER_DESC, "string", false, true));
-    return new PluginClass("inputformat", NAME, DESC, DelimitedInputFormatProvider.class.getName(),
+    return new PluginClass(ValidatingInputFormat.PLUGIN_TYPE, NAME, DESC, DelimitedInputFormatProvider.class.getName(),
                            "conf", properties);
   }
 }

@@ -24,6 +24,7 @@ import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 import org.apache.parquet.format.CompressionCodec;
 
@@ -35,7 +36,7 @@ import javax.annotation.Nullable;
 /**
  * Output format plugin for parquet.
  */
-@Plugin(type = "outputformat")
+@Plugin(type = ValidatingOutputFormat.PLUGIN_TYPE)
 @Name(ParquetOutputFormatProvider.NAME)
 @Description(ParquetOutputFormatProvider.DESC)
 public class ParquetOutputFormatProvider extends AbstractOutputFormatProvider {
@@ -108,7 +109,7 @@ public class ParquetOutputFormatProvider extends AbstractOutputFormatProvider {
     properties.put("schema", new PluginPropertyField("schema", Conf.SCHEMA_DESC, "string", false, true));
     properties.put("compressionCodec",
                    new PluginPropertyField("compressionCodec", Conf.CODEC_DESC, "string", false, true));
-    return new PluginClass("outputformat", NAME, DESC, ParquetOutputFormatProvider.class.getName(),
+    return new PluginClass(ValidatingOutputFormat.PLUGIN_TYPE, NAME, DESC, ParquetOutputFormatProvider.class.getName(),
                            "conf", properties);
   }
 }

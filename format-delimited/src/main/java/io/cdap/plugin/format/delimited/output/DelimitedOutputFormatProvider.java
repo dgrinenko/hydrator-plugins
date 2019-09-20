@@ -23,6 +23,7 @@ import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.plugin.PluginClass;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 import io.cdap.plugin.format.output.AbstractOutputFormatProvider;
 
 import java.util.Collections;
@@ -33,7 +34,7 @@ import javax.annotation.Nullable;
 /**
  * Output format plugin for delimited.
  */
-@Plugin(type = "outputformat")
+@Plugin(type = ValidatingOutputFormat.PLUGIN_TYPE)
 @Name(DelimitedOutputFormatProvider.NAME)
 @Description(DelimitedOutputFormatProvider.DESC)
 public class DelimitedOutputFormatProvider extends AbstractOutputFormatProvider {
@@ -78,7 +79,7 @@ public class DelimitedOutputFormatProvider extends AbstractOutputFormatProvider 
   private static PluginClass getPluginClass() {
     Map<String, PluginPropertyField> properties = new HashMap<>();
     properties.put("delimiter", new PluginPropertyField("delimiter", Conf.DELIMITER_DESC, "string", false, true));
-    return new PluginClass("outputformat", NAME, DESC, DelimitedOutputFormatProvider.class.getName(),
-                           "conf", properties);
+    return new PluginClass(ValidatingOutputFormat.PLUGIN_TYPE, NAME, DESC,
+                           DelimitedOutputFormatProvider.class.getName(), "conf", properties);
   }
 }

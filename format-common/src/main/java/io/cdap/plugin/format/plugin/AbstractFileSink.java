@@ -61,14 +61,12 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     config.validate(collector);
 
-    FileFormat format = getFileFormat();
-    if (format != null) {
-      ValidatingOutputFormat validatingOutputFormat =
-        pipelineConfigurer.usePlugin("outputformat", format.name().toLowerCase(),
-                                     FORMAT_PLUGIN_ID, config.getProperties());
-      FormatContext context = new FormatContext(collector, pipelineConfigurer.getStageConfigurer().getInputSchema());
-      validateOutputFormatProvider(context, format, validatingOutputFormat);
-    }
+    FileFormat format = config.getFormat();
+    ValidatingOutputFormat validatingOutputFormat =
+      pipelineConfigurer.usePlugin(ValidatingOutputFormat.PLUGIN_TYPE, format.name().toLowerCase(),
+                                   FORMAT_PLUGIN_ID, config.getProperties());
+    FormatContext context = new FormatContext(collector, pipelineConfigurer.getStageConfigurer().getInputSchema());
+    validateOutputFormatProvider(context, format, validatingOutputFormat);
   }
 
   @Override
@@ -76,11 +74,9 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
     FailureCollector collector = context.getFailureCollector();
     config.validate(collector);
     ValidatingOutputFormat validatingOutputFormat = context.newPluginInstance(FORMAT_PLUGIN_ID);
-    FileFormat fileFormat = getFileFormat();
-    if (fileFormat != null) {
-      FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
-      validateOutputFormatProvider(formatContext, fileFormat, validatingOutputFormat);
-    }
+    FileFormat fileFormat = config.getFormat();
+    FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
+    validateOutputFormatProvider(formatContext, fileFormat, validatingOutputFormat);
     collector.getOrThrowException();
 
 
@@ -140,22 +136,9 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
     if (validatingOutputFormat == null) {
       collector.addFailure(
         String.format("Could not find the '%s' output format plugin.", format.name().toLowerCase()), null)
-        .withPluginNotFound(FORMAT_PLUGIN_ID, format.name().toLowerCase(), "outputformat");
+        .withPluginNotFound(FORMAT_PLUGIN_ID, format.name().toLowerCase(), ValidatingOutputFormat.PLUGIN_TYPE);
     } else {
       validatingOutputFormat.validate(context);
     }
-  }
-
-  /**
-   * Returns configured file format.
-   */
-  @Nullable
-  private FileFormat getFileFormat() {
-    try {
-      return config.getFormat();
-    } catch (IllegalArgumentException e) {
-      // ignore
-    }
-    return null;
   }
 }
