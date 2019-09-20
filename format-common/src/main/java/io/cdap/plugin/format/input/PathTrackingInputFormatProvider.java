@@ -19,7 +19,7 @@ package io.cdap.plugin.format.input;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.validation.FormatContext;
-import io.cdap.cdap.etl.api.validation.ValidatingInputFormatProvider;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,8 +30,7 @@ import javax.annotation.Nullable;
  *
  * @param <T> type of plugin config
  */
-public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConfig>
-  implements ValidatingInputFormatProvider {
+public abstract class PathTrackingInputFormatProvider<T extends PathTrackingConfig> implements ValidatingInputFormat {
   private static final String NAME_SCHEMA = "schema";
   protected T conf;
 

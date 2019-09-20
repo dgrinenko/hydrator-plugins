@@ -27,7 +27,7 @@ import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.cdap.etl.api.batch.BatchSinkContext;
 import io.cdap.cdap.etl.api.validation.FormatContext;
-import io.cdap.cdap.etl.api.validation.ValidatingOutputFormatProvider;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 import io.cdap.plugin.common.LineageRecorder;
 import io.cdap.plugin.common.batch.sink.SinkOutputFormatProvider;
 import io.cdap.plugin.format.FileFormat;
@@ -63,11 +63,11 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
 
     FileFormat format = getFileFormat();
     if (format != null) {
-      ValidatingOutputFormatProvider outputFormatProvider =
+      ValidatingOutputFormat validatingOutputFormat =
         pipelineConfigurer.usePlugin("outputformat", format.name().toLowerCase(),
                                      FORMAT_PLUGIN_ID, config.getProperties());
       FormatContext context = new FormatContext(collector, pipelineConfigurer.getStageConfigurer().getInputSchema());
-      validateOutputFormatProvider(context, format, outputFormatProvider);
+      validateOutputFormatProvider(context, format, validatingOutputFormat);
     }
   }
 
@@ -75,11 +75,11 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
   public final void prepareRun(BatchSinkContext context) throws InstantiationException {
     FailureCollector collector = context.getFailureCollector();
     config.validate(collector);
-    ValidatingOutputFormatProvider validatingOutputFormatProvider = context.newPluginInstance(FORMAT_PLUGIN_ID);
+    ValidatingOutputFormat validatingOutputFormat = context.newPluginInstance(FORMAT_PLUGIN_ID);
     FileFormat fileFormat = getFileFormat();
     if (fileFormat != null) {
       FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
-      validateOutputFormatProvider(formatContext, fileFormat, validatingOutputFormatProvider);
+      validateOutputFormatProvider(formatContext, fileFormat, validatingOutputFormat);
     }
     collector.getOrThrowException();
 
@@ -97,12 +97,12 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
                     schema.getFields().stream().map(Schema.Field::getName).collect(Collectors.toList()));
     }
 
-    Map<String, String> outputProperties = new HashMap<>(validatingOutputFormatProvider.getOutputFormatConfiguration());
+    Map<String, String> outputProperties = new HashMap<>(validatingOutputFormat.getOutputFormatConfiguration());
     outputProperties.putAll(getFileSystemProperties(context));
     outputProperties.put(FileOutputFormat.OUTDIR, getOutputDir(context.getLogicalStartTime()));
 
     context.addOutput(Output.of(config.getReferenceName(),
-                                new SinkOutputFormatProvider(validatingOutputFormatProvider.getOutputFormatClassName(),
+                                new SinkOutputFormatProvider(validatingOutputFormat.getOutputFormatClassName(),
                                                              outputProperties)));
   }
 
@@ -135,14 +135,14 @@ public abstract class AbstractFileSink<T extends PluginConfig & FileSinkProperti
   }
 
   private void validateOutputFormatProvider(FormatContext context, FileFormat format,
-                                            @Nullable ValidatingOutputFormatProvider validatingOutputFormatProvider) {
+                                            @Nullable ValidatingOutputFormat validatingOutputFormat) {
     FailureCollector collector = context.getFailureCollector();
-    if (validatingOutputFormatProvider == null) {
+    if (validatingOutputFormat == null) {
       collector.addFailure(
         String.format("Could not find the '%s' output format plugin.", format.name().toLowerCase()), null)
         .withPluginNotFound(FORMAT_PLUGIN_ID, format.name().toLowerCase(), "outputformat");
     } else {
-      validatingOutputFormatProvider.validate(context);
+      validatingOutputFormat.validate(context);
     }
   }
 

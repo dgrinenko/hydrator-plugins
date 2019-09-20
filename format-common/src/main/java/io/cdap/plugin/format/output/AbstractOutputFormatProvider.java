@@ -17,12 +17,12 @@
 package io.cdap.plugin.format.output;
 
 import io.cdap.cdap.etl.api.validation.FormatContext;
-import io.cdap.cdap.etl.api.validation.ValidatingOutputFormatProvider;
+import io.cdap.cdap.etl.api.validation.ValidatingOutputFormat;
 
 /**
  * Abstract class for output format provider
  */
-public abstract class AbstractOutputFormatProvider implements ValidatingOutputFormatProvider {
+public abstract class AbstractOutputFormatProvider implements ValidatingOutputFormat {
 
   @Override
   public void validate(FormatContext context) {

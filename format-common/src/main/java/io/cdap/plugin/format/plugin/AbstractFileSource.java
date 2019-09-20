@@ -27,7 +27,7 @@ import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.batch.BatchSource;
 import io.cdap.cdap.etl.api.batch.BatchSourceContext;
 import io.cdap.cdap.etl.api.validation.FormatContext;
-import io.cdap.cdap.etl.api.validation.ValidatingInputFormatProvider;
+import io.cdap.cdap.etl.api.validation.ValidatingInputFormat;
 import io.cdap.plugin.common.LineageRecorder;
 import io.cdap.plugin.common.SourceInputFormatProvider;
 import io.cdap.plugin.common.batch.JobUtils;
@@ -79,14 +79,14 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
     FileFormat fileFormat = getFileFormat();
     Schema schema = null;
     if (fileFormat != null) {
-      ValidatingInputFormatProvider inputFormatProvider =
+      ValidatingInputFormat validatingInputFormat =
         pipelineConfigurer.usePlugin("inputformat", fileFormat.name().toLowerCase(), FORMAT_PLUGIN_ID,
                                      config.getProperties());
       FormatContext context = new FormatContext(collector, null);
-      validateInputFormatProvider(context, fileFormat, inputFormatProvider);
+      validateInputFormatProvider(context, fileFormat, validatingInputFormat);
 
-      if (inputFormatProvider != null) {
-        schema = inputFormatProvider.getSchema(context);
+      if (validatingInputFormat != null) {
+        schema = validatingInputFormat.getSchema(context);
       }
     }
 
@@ -98,12 +98,12 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
   public void prepareRun(BatchSourceContext context) throws Exception {
     FailureCollector collector = context.getFailureCollector();
     config.validate(collector);
-    ValidatingInputFormatProvider inputFormatProvider = context.newPluginInstance(FORMAT_PLUGIN_ID);
+    ValidatingInputFormat validatingInputFormat = context.newPluginInstance(FORMAT_PLUGIN_ID);
     FileFormat fileFormat = getFileFormat();
     if (fileFormat != null) {
       FormatContext formatContext = new FormatContext(collector, context.getInputSchema());
-      validateInputFormatProvider(formatContext, fileFormat, inputFormatProvider);
-      validatePathField(collector, inputFormatProvider.getSchema(formatContext));
+      validateInputFormatProvider(formatContext, fileFormat, validatingInputFormat);
+      validatePathField(collector, validatingInputFormat.getSchema(formatContext));
     }
     collector.getOrThrowException();
 
@@ -147,9 +147,9 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
     } else {
       FileInputFormat.addInputPath(job, path);
       FileInputFormat.setMaxInputSplitSize(job, config.getMaxSplitSize());
-      inputFormatClass = inputFormatProvider.getInputFormatClassName();
+      inputFormatClass = validatingInputFormat.getInputFormatClassName();
       Configuration hConf = job.getConfiguration();
-      Map<String, String> inputFormatConfiguration = inputFormatProvider.getInputFormatConfiguration();
+      Map<String, String> inputFormatConfiguration = validatingInputFormat.getInputFormatConfiguration();
       for (Map.Entry<String, String> propertyEntry : inputFormatConfiguration.entrySet()) {
         hConf.set(propertyEntry.getKey(), propertyEntry.getValue());
       }
@@ -187,14 +187,14 @@ public abstract class AbstractFileSource<T extends PluginConfig & FileSourceProp
   }
 
   private void validateInputFormatProvider(FormatContext context, FileFormat fileFormat,
-                                           @Nullable ValidatingInputFormatProvider validatingInputFormatProvider) {
+                                           @Nullable ValidatingInputFormat validatingInputFormat) {
     FailureCollector collector = context.getFailureCollector();
-    if (validatingInputFormatProvider == null) {
+    if (validatingInputFormat == null) {
       collector.addFailure(
         String.format("Could not find the '%s' input format.", fileFormat.name().toLowerCase()), null)
         .withPluginNotFound(FORMAT_PLUGIN_ID, fileFormat.name().toLowerCase(), "inputformat");
     } else {
-      validatingInputFormatProvider.validate(context);
+      validatingInputFormat.validate(context);
     }
   }
 

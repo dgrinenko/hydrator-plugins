@@ -109,7 +109,7 @@ public class BlobInputFormatProvider extends PathTrackingInputFormatProvider<Blo
     Schema.Field bodyField = schema.getField(BlobConfig.NAME_BODY);
     if (bodyField == null) {
       collector.addFailure("The schema for the 'blob' format must have a field named 'body' of type 'bytes'.", null)
-      .withOutputSchemaField(BlobConfig.NAME_SCHEMA);
+        .withOutputSchemaField(BlobConfig.NAME_SCHEMA);
     } else {
       Schema bodySchema = bodyField.getSchema();
       Schema nonNullableSchema = bodySchema.isNullable() ? bodySchema.getNonNullable() : bodySchema;
