@@ -85,7 +85,8 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
     // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     outSchema = config.getOutputSchema(collector);
-    if (pipelineConfigurer.getStageConfigurer().getInputSchema().getField(this.config.inputField) == null) {
+    if (!this.config.containsMacro(INPUT)
+        && pipelineConfigurer.getStageConfigurer().getInputSchema().getField(this.config.inputField) == null) {
       collector.addFailure(String.format("Input field '%s' must exist in input schema.", this.config.inputField), null)
           .withConfigProperty(INPUT);
     }
