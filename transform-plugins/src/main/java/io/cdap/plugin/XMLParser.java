@@ -25,10 +25,12 @@ import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.etl.api.Emitter;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.InvalidEntry;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.Transform;
 import io.cdap.cdap.etl.api.TransformContext;
+import io.cdap.cdap.etl.api.validation.ValidationFailure;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -63,6 +65,9 @@ import javax.xml.xpath.XPathFactory;
 @Name("XMLParser")
 @Description("Parse XML events based on XPath")
 public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
+  private static final String FIELD_TYPE_MAPPING = "fieldTypeMapping";
+  private static final String INPUT = "input";
+  private static final String XPATH_MAPPINGS = "xPathMappings";
   private static final String EXIT_ON_ERROR = "Exit on error";
   private static final String WRITE_ERROR_DATASET = "Write to error dataset";
   private final Config config;
@@ -77,11 +82,18 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    outSchema = config.getOutputSchema();
+    // Get failure collector for updated validation API
+    FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
+    outSchema = config.getOutputSchema(collector);
+    if (pipelineConfigurer.getStageConfigurer().getInputSchema().getField(this.config.inputField) == null) {
+      collector.addFailure(String.format("Input field '%s' must exist in input schema.", this.config.inputField), null)
+          .withConfigProperty(INPUT);
+    }
     try {
-      validateXpathAndSchema();
+      validateXpathAndSchema(collector);
     } catch (UnsupportedEncodingException e) {
-      throw new IllegalArgumentException("Failed to parse XPath mappings. Reason : " + e.getMessage());
+      collector.addFailure(String.format("Failed to parse XPath mappings: %s.", e.getMessage()), null)
+          .withConfigProperty(XPATH_MAPPINGS);
     }
     pipelineConfigurer.getStageConfigurer().setOutputSchema(outSchema);
   }
@@ -89,54 +101,59 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
   @Override
   public void initialize(TransformContext context) throws Exception {
     super.initialize(context);
-    outSchema = config.getOutputSchema();
-    xPathMapping = getXPathMapping();
+    // Get failure collector for updated validation API
+    FailureCollector collector = getContext().getFailureCollector();
+    outSchema = config.getOutputSchema(collector);
+    xPathMapping = getXPathMapping(collector);
   }
 
   /**
    * Valid if xpathMappings and schema contain the same field names.
    */
-  private void validateXpathAndSchema() throws UnsupportedEncodingException {
-    xPathMapping = getXPathMapping();
+  private void validateXpathAndSchema(FailureCollector collector) throws UnsupportedEncodingException {
+    xPathMapping = getXPathMapping(collector);
     List<Schema.Field> outFields = outSchema.getFields();
     // Checks if all the fields in the XPath mapping are present in the output schema.
     // If they are not a list of fields that are not present is included in the error message.
-    StringBuilder notOutput = new StringBuilder();
     for (Schema.Field field : outFields) {
       String fieldName = field.getName();
       if (!xPathMapping.keySet().contains(field.getName())) {
-        notOutput.append(fieldName + ";");
+        ValidationFailure failure = collector.addFailure(
+            String.format("Field '%s' must be present in XPath Mapping.", fieldName), null);
+        if (field.getSchema().isNullableSimple()) {
+          String typeString = field.getSchema().getNonNullable().getType().toString().toLowerCase();
+          failure.withConfigElement(FIELD_TYPE_MAPPING, String.format("%s:%s", fieldName, typeString));
+        } else {
+          // This should never happen assuming all mappable types are nullable simple but just in case
+          failure.withConfigProperty(FIELD_TYPE_MAPPING);
+        }
       }
-    }
-    if (notOutput.length() > 0) {
-      throw new IllegalArgumentException("Following fields are not present in output schema :" +
-                                           notOutput.toString());
     }
   }
 
-  private Map<String, String> getXPathMapping() throws UnsupportedEncodingException, IllegalArgumentException {
+  private Map<String, String> getXPathMapping(FailureCollector collector)
+      throws UnsupportedEncodingException, IllegalArgumentException {
     Map<String, String> map = new HashMap<>();
     String[] xpaths = config.xPathFieldMapping.split(",");
     for (String xpath : xpaths) {
       String[] xpathmap = xpath.split(":"); //name:xpath[,name:xpath]*
 
       if (xpathmap.length != 2) {
-        throw new IllegalArgumentException("Invalid XPath mapping specified : '" + xpath + "'");
+        collector.addFailure(String.format("Invalid XPath mapping: '%s'.", xpath), null)
+            .withConfigElement(XPATH_MAPPINGS, xpath);
+      } else if (xpathmap[0] == null || xpathmap[0].trim().isEmpty()) {
+        collector.addFailure(String.format("XPath mapping is missing a field name: '%s'.", xpath), null)
+            .withConfigElement(XPATH_MAPPINGS, xpath);
+      } else if (xpathmap[1] == null || xpathmap[1].trim().isEmpty()) {
+        collector.addFailure(String.format("XPath mapping is missing xpath: '%s'.", xpath), null)
+            .withConfigElement(XPATH_MAPPINGS, xpath);
+      } else {
+        String fieldName = URLDecoder.decode(xpathmap[0].trim(), "UTF-8");
+        String path = URLDecoder.decode(xpathmap[1].trim(), "UTF-8");
+        map.put(fieldName, path);
       }
-
-      if (xpathmap[0] == null || xpathmap[0].trim().isEmpty()) {
-        throw new IllegalArgumentException("XPath mapping is missing a field name : '" + xpath + "'");
-      }
-
-      if (xpathmap[1] == null || xpathmap[1].trim().isEmpty()) {
-        throw new IllegalArgumentException("XPath mapping is missing xpath : '" + xpath + "'");
-      }
-
-
-      String fieldName = URLDecoder.decode(xpathmap[0].trim(), "UTF-8");
-      String path = URLDecoder.decode(xpathmap[1].trim(), "UTF-8");
-      map.put(fieldName, path);
     }
+    collector.getOrThrowException();
     return map;
   }
 
@@ -291,26 +308,32 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
      *
      * @return output schema
      */
-    private Schema getOutputSchema() {
+    private Schema getOutputSchema(FailureCollector collector) {
       List<Schema.Field> fields = new ArrayList<>();
+      List<String> fieldNames = new ArrayList<>();
       String[] mappings = fieldTypeMapping.split(",");
       for (String mapping : mappings) {
         String[] params = mapping.split(":");
         String fieldName = params[0].trim();
         if (Strings.isNullOrEmpty(fieldName)) {
-          throw new IllegalArgumentException("Field name cannot be null or empty.");
+          collector.addFailure("Field name cannot be null or empty.", null)
+              .withConfigElement(FIELD_TYPE_MAPPING, mapping);
         } else if (params.length < 2 || Strings.isNullOrEmpty(params[1])) {
-          throw new IllegalArgumentException("Type cannot be null. Please specify type for " + fieldName);
-        }
-        Schema.Field field = Schema.Field.of(fieldName, Schema.nullableOf(Schema.of(Schema.Type.valueOf(
-          params[1].trim().toUpperCase()))));
-        if (fields.contains(field)) {
-          throw new IllegalArgumentException(String.format("Field %s already has type specified. Duplicate field %s",
-                                                           fieldName, fieldName));
+          collector.addFailure(String.format("A type must be provided for field '%s'.", fieldName), null)
+              .withConfigElement(FIELD_TYPE_MAPPING, mapping);
         } else {
-          fields.add(field);
+          Schema.Field field = Schema.Field.of(fieldName, Schema.nullableOf(Schema.of(Schema.Type.valueOf(
+            params[1].trim().toUpperCase()))));
+          if (fieldNames.contains(field.getName())) {
+            collector.addFailure(String.format("Field '%s' already has a type specified.", fieldName), null)
+                .withConfigElement(FIELD_TYPE_MAPPING, mapping);
+          } else {
+            fields.add(field);
+            fieldNames.add(field.getName());
+          }
         }
       }
+      collector.getOrThrowException();
       return Schema.recordOf("record", fields);
     }
   }

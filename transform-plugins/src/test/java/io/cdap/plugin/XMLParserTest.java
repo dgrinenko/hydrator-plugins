@@ -19,8 +19,11 @@ package io.cdap.plugin;
 import com.google.common.collect.ImmutableList;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.InvalidEntry;
 import io.cdap.cdap.etl.api.Transform;
+import io.cdap.cdap.etl.api.validation.CauseAttributes;
+import io.cdap.cdap.etl.api.validation.ValidationFailure.Cause;
 import io.cdap.cdap.etl.mock.common.MockEmitter;
 import io.cdap.cdap.etl.mock.common.MockPipelineConfigurer;
 import io.cdap.cdap.etl.mock.transform.MockTransformContext;
@@ -32,6 +35,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 public class XMLParserTest {
+  private static final String validationExceptionMessage = "Errors were encountered during validation.";
+  private static final String stage = "stage";
+  private static final String mockStage = "mockstage";
+
   private static final Schema INPUT = Schema.recordOf("input", Schema.Field.of("offset", Schema.of(Schema.Type.INT)),
                                                       Schema.Field.of("body", Schema.of(Schema.Type.STRING)));
 
@@ -45,12 +52,22 @@ public class XMLParserTest {
                                                    "Exit on error");
 
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(INPUT);
+    String caughtMessage = "";
     try {
       new XMLParser(config).configurePipeline(configurer);
       Assert.fail();
-    } catch (IllegalArgumentException e) {
-      Assert.assertEquals("Type cannot be null. Please specify type for category", e.getMessage());
+    } catch (Exception e) {
+      caughtMessage = e.getMessage();
     }
+    Assert.assertEquals(validationExceptionMessage, caughtMessage);
+    FailureCollector collector = configurer.getStageConfigurer().getFailureCollector();
+    Assert.assertEquals(1, collector.getValidationFailures().size());
+    Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
+    Cause expectedCause = new Cause();
+    expectedCause.addAttribute(stage, mockStage);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, "fieldTypeMapping");
+    expectedCause.addAttribute(CauseAttributes.CONFIG_ELEMENT, "category:");
+    Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 
   @Test
@@ -247,5 +264,35 @@ public class XMLParserTest {
     List<StructuredRecord> expected = ImmutableList.of(
       StructuredRecord.builder(schema).set("category", "cooking").set("title", "Everyday Italian").build());
     Assert.assertEquals(expected, emitter.getEmitted());
+  }
+
+  @Test
+  public void testInputFieldNotInSchema() throws Exception {
+    Schema schema = Schema.recordOf("record",
+        Schema.Field.of("title", Schema.nullableOf(Schema.of(Schema.Type.STRING))),
+        Schema.Field.of("author", Schema.nullableOf(Schema.of(Schema.Type.STRING))),
+        Schema.Field.of("year", Schema.nullableOf(Schema.of(Schema.Type.STRING))));
+
+    XMLParser.Config config = new XMLParser.Config(
+        "x", "UTF-8",
+        "title:/book/title,author:/book/author,year:/book/year",
+        "title:string,author:string,year:string",
+        "Write to error dataset");
+    MockPipelineConfigurer configurer = new MockPipelineConfigurer(INPUT);
+    String caughtMessage = "";
+    try {
+      new XMLParser(config).configurePipeline(configurer);
+      Assert.fail();
+    } catch (Exception e) {
+      caughtMessage = e.getMessage();
+    }
+    Assert.assertEquals(validationExceptionMessage, caughtMessage);
+    FailureCollector collector = configurer.getStageConfigurer().getFailureCollector();
+    Assert.assertEquals(1, collector.getValidationFailures().size());
+    Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
+    Cause expectedCause = new Cause();
+    expectedCause.addAttribute(stage, mockStage);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, "input");
+    Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 }
