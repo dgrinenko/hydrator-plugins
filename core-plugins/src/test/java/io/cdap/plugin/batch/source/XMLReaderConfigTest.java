@@ -27,14 +27,6 @@ import org.junit.Test;
  * Unit test for {@link XMLReaderBatchSource.XMLReaderConfig} class.
  */
 public class XMLReaderConfigTest {
-  private static final String validationExceptionMessage = "Errors were encountered during validation.";
-  private static final String stage = "stage";
-  private static final String mockStage = "mockstage";
-  private static final String PATH = "path";
-  private static final String NODE_PATH = "nodePath";
-  private static final String TARGET_FOLDER = "targetFolder";
-  private static final String TEMPORARY_FOLDER = "temporaryFolder";
-
   @Test
   public void testValidateConfig() {
     String path = "/opt/hdfs/catalog.xml";
@@ -59,18 +51,11 @@ public class XMLReaderConfigTest {
                                                                                            "XMLTrackingTable", 30,
                                                                                            "/tmp");
     FailureCollector collector = new MockFailureCollector();
-    String caughtException = "";
-    try {
-      config.validate(collector);
-    } catch (Exception e) {
-      caughtException = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtException);
+    config.validate(collector);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, PATH);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLReaderBatchSource.XMLReaderConfig.PATH);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 
@@ -82,18 +67,11 @@ public class XMLReaderConfigTest {
                                                                                            "Yes", "XMLTrackingTable",
                                                                                            30, "/tmp");
     FailureCollector collector = new MockFailureCollector();
-    String caughtException = "";
-    try {
-      config.validate(collector);
-    } catch (Exception e) {
-      caughtException = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtException);
+    config.validate(collector);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, NODE_PATH);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLReaderBatchSource.XMLReaderConfig.NODE_PATH);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 
@@ -106,13 +84,7 @@ public class XMLReaderConfigTest {
                                                                                            "XMLTrackingTable", 30,
                                                                                            "/tmp");
     FailureCollector collector = new MockFailureCollector();
-    String caughtException = "";
-    try {
-      config.validate(collector);
-    } catch (Exception e) {
-      caughtException = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtException);
+    config.validate(collector);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(2, collector.getValidationFailures().get(0).getCauses().size());
   }
@@ -126,18 +98,11 @@ public class XMLReaderConfigTest {
                                                                                            "XMLTrackingTable", 30,
                                                                                            "/tmp");
     FailureCollector collector = new MockFailureCollector();
-    String caughtException = "";
-    try {
-      config.validate(collector);
-    } catch (Exception e) {
-      caughtException = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtException);
+    config.validate(collector);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, TARGET_FOLDER);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLReaderBatchSource.XMLReaderConfig.TARGET_FOLDER);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 
@@ -150,18 +115,11 @@ public class XMLReaderConfigTest {
                                                                                            "XMLTrackingTable", 30,
                                                                                            null);
     FailureCollector collector = new MockFailureCollector();
-    String caughtException = "";
-    try {
-      config.validate(collector);
-    } catch (Exception e) {
-      caughtException = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtException);
+    config.validate(collector);
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, TEMPORARY_FOLDER);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLReaderBatchSource.XMLReaderConfig.TEMPORARY_FOLDER);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 }

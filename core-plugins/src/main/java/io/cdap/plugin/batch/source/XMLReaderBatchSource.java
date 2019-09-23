@@ -80,15 +80,6 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
   private static final Gson GSON = new Gson();
   private static final Type ARRAYLIST_PREPROCESSED_FILES  = new TypeToken<ArrayList<String>>() { }.getType();
 
-  private static final String PATH = "path";
-  private static final String PATTERN = "pattern";
-  private static final String NODE_PATH = "nodePath";
-  private static final String TABLE_EXPIRY_PERIOD = "tableExpiryPeriod";
-  private static final String TARGET_FOLDER = "targetFolder";
-  private static final String TEMPORARY_FOLDER = "temporaryFolder";
-  private static final String ACTION_AFTER_PROCESS = "actionAfterProcess";
-  private static final String REPROCESSING_REQUIRED = "reprocessingRequired";
-
   public static final Schema DEFAULT_XML_SCHEMA = Schema.recordOf(
     "xmlSchema",
     Schema.Field.of("offset", Schema.of(Schema.Type.LONG)),
@@ -115,7 +106,10 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
-    config.validate(pipelineConfigurer.getStageConfigurer().getFailureCollector());
+    // Get failure collector for updated validation API
+    FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
+    config.validate(collector);
+    collector.getOrThrowException();
     pipelineConfigurer.getStageConfigurer().setOutputSchema(DEFAULT_XML_SCHEMA);
     if (!config.containsMacro("tableName") && !Strings.isNullOrEmpty(config.tableName)) {
       pipelineConfigurer.createDataset(config.tableName, KeyValueTable.class.getName());
@@ -124,7 +118,10 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
 
   @Override
   public void prepareRun(BatchSourceContext context) throws Exception {
-    config.validate(context.getFailureCollector());
+    // Get failure collector for updated validation API
+    FailureCollector collector = context.getFailureCollector();
+    config.validate(collector);
+    collector.getOrThrowException();
     // Create dataset if macros were provided at configure time
     if (!Strings.isNullOrEmpty(config.tableName) && !context.datasetExists(config.tableName)) {
       context.createDataset(config.tableName, KeyValueTable.class.getName(), DatasetProperties.EMPTY);
@@ -239,6 +236,15 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
    * Config class that contains all the properties needed for the XML Reader.
    */
   public static class XMLReaderConfig extends ReferencePluginConfig {
+    public static final String PATH = "path";
+    public static final String PATTERN = "pattern";
+    public static final String NODE_PATH = "nodePath";
+    public static final String TABLE_EXPIRY_PERIOD = "tableExpiryPeriod";
+    public static final String TARGET_FOLDER = "targetFolder";
+    public static final String TEMPORARY_FOLDER = "temporaryFolder";
+    public static final String ACTION_AFTER_PROCESS = "actionAfterProcess";
+    public static final String REPROCESSING_REQUIRED = "reprocessingRequired";
+
     @Description("Path to file(s) to be read. If a directory is specified, terminate the path name with a \'/\'.")
     @Macro
     private final String path;
@@ -274,14 +280,10 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
     private final String reprocessingRequired;
 
     @Nullable
-    @Description("Table name to be used to keep track of processed file(s).")
     @Macro
     private final String tableName;
 
     @Nullable
-    @Description("Expiry period (days) for data in the table. Data will be persisted in the table " +
-      "if no expiry period is provided." +
-      "Example: For tableExpiryPeriod = 30, data before 30 days get deleted from the table.")
     @Macro
     private final Integer tableExpiryPeriod;
 
@@ -336,22 +338,22 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
 
       if (!containsMacro(TABLE_EXPIRY_PERIOD) && tableExpiryPeriod != null && tableExpiryPeriod < 0) {
         collector.addFailure(String.format("Invalid value: %d.", tableExpiryPeriod),
-            "Value for 'Table Expiry Period' should either be empty or greater than 0")
-            .withConfigProperty(TABLE_EXPIRY_PERIOD);
+                             "Value for 'Table Expiry Period' should either be empty or greater than 0")
+          .withConfigProperty(TABLE_EXPIRY_PERIOD);
       }
 
       if (!containsMacro(TEMPORARY_FOLDER) && Strings.isNullOrEmpty(temporaryFolder)) {
         collector.addFailure("Temporary folder cannot be empty.", null)
-            .withConfigProperty(TEMPORARY_FOLDER);
+          .withConfigProperty(TEMPORARY_FOLDER);
       }
 
       boolean onlyOneActionRequired = !Strings.isNullOrEmpty(actionAfterProcess)
           && !actionAfterProcess.equalsIgnoreCase("NONE")
           && isReprocessingRequired();
       if (onlyOneActionRequired) {
-        collector.addFailure("Only one of 'After Processing Action' or 'Reprocessing Required' "
-            + "may be selected at a time.", null)
-            .withConfigProperty(ACTION_AFTER_PROCESS).withConfigProperty(REPROCESSING_REQUIRED);
+        collector.addFailure("Only one of 'After Processing Action' or 'Reprocessing Required' " +
+                               "may be selected at a time.", null)
+          .withConfigProperty(ACTION_AFTER_PROCESS).withConfigProperty(REPROCESSING_REQUIRED);
       }
 
       boolean targetFolderEmpty = Strings.isNullOrEmpty(targetFolder)
@@ -360,8 +362,8 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
           || actionAfterProcess.equalsIgnoreCase("MOVE")));
       if (targetFolderEmpty) {
         collector.addFailure(
-            String.format("Target folder cannot be empty for Action = '%s'.", actionAfterProcess), null)
-            .withConfigProperty(TARGET_FOLDER);
+          String.format("Target folder cannot be empty for Action = '%s'.", actionAfterProcess), null)
+          .withConfigProperty(TARGET_FOLDER);
       }
 
       if (!Strings.isNullOrEmpty(pattern)) {
@@ -369,19 +371,19 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
           Pattern.compile(pattern);
         } catch (Exception e) {
           collector.addFailure(
-              String.format("Invalid regular expression: '%s'.", pattern), null)
-              .withConfigProperty(PATTERN);
+            String.format("Invalid regular expression: '%s'.", pattern), null)
+            .withConfigProperty(PATTERN);
         }
         // By default, the Hadoop FileInputFormat won't return any files when using a regex pattern unless the path
         // has globs in it. Checking for that scenario.
         if (path.endsWith("/") ||
           !(path.contains("*") || path.contains("?") || path.contains("{") || path.contains("["))) {
-          collector.addFailure("When filtering with regular expressions, the path must "
-              + "be a directory and leverage glob syntax.", "Usually the folder path needs "
-              + "to end with '/*'.").withConfigProperty(PATH).withConfigProperty(PATTERN);
+          collector.addFailure("When filtering with regular expressions, the path must " +
+                                 "be a directory and leverage glob syntax.",
+                               "Usually the folder path needs to end with '/*'.")
+            .withConfigProperty(PATH).withConfigProperty(PATTERN);
         }
       }
-      collector.getOrThrowException();
     }
   }
 }
