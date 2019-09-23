@@ -147,12 +147,12 @@ public class TMSAlertPublisher extends AlertPublisher {
     private void validate(FailureCollector collector) {
       if (autoCreateTopic && namespace != null) {
         collector.addFailure("Cannot auto-create topic when namespace is set.",
-                "Namespace must not be set to auto-create topic.").withConfigProperty("namespace")
+                             "Namespace must not be set to auto-create topic.").withConfigProperty("namespace")
                 .withConfigProperty("autoCreateTopic");
       }
       if (maxAlertsPerSecond < 1) {
         collector.addFailure(String.format("Invalid maxAlertsPerSecond %d. Must be at least 1.", maxAlertsPerSecond),
-                "").withConfigProperty("maxAlertsPerSecond");
+                            "").withConfigProperty("maxAlertsPerSecond");
       }
     }
   }
