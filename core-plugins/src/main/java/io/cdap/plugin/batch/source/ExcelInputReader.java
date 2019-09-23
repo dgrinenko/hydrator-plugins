@@ -140,7 +140,11 @@ public class ExcelInputReader extends BatchSource<LongWritable, Object, Structur
       String[] mappings = excelInputreaderConfig.columnMapping.split(",");
       for (String map : mappings) {
         String[] columns = map.split(":");
-        if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
+        if (columns.length < 2 || Strings.isNullOrEmpty(columns[1])) {
+          collector.addFailure(
+            String.format("Column: '%s' in 'Column-Label Mapping' must have an alias specified.", columns[0]), null)
+            .withConfigElement(COLUMN_MAPPING, map);
+        } else if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
           collector.addFailure(
             String.format("Column: '%s' in 'Column-Label Mapping' " +
                             "must be included in 'Column To Be Extracted'", columns[0]), null)
@@ -155,7 +159,11 @@ public class ExcelInputReader extends BatchSource<LongWritable, Object, Structur
       String[] schemaList = excelInputreaderConfig.outputSchema.split(",");
       for (String schema : schemaList) {
         String[] columns = schema.split(":");
-        if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
+        if (columns.length < 2 || Strings.isNullOrEmpty(columns[1])) {
+          collector.addFailure(
+            String.format("Column: '%s' in 'Field Name Schema Type Mapping' must have an type.", columns[0]), null)
+            .withConfigElement(OUTPUT_SCHEMA, schema);
+        } else if (CollectionUtils.isNotEmpty(inputColumns) && !inputColumns.contains(columns[0])) {
           collector.addFailure(
             String.format("Column: '%s' in 'Field Name Schema Type Mapping' " +
                             "must be included in 'Column To Be Extracted'", columns[0]), null)
