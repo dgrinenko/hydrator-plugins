@@ -39,10 +39,6 @@ import javax.annotation.Nullable;
 public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredRecord> {
   private final Config config;
 
-  private static final String MESSAGE_FIELD = "messageField";
-  private static final String CODE_FIELD = "codeField";
-  private static final String STAGE_FIELD = "stageField";
-
   public ErrorCollector(Config config) {
     this.config = config;
   }
@@ -55,21 +51,21 @@ public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredR
     if (inputSchema != null) {
       if (config.messageField != null && inputSchema.getField(config.messageField) != null) {
         collector.addFailure(
-            String.format("Input schema already contains message field '%s'.", config.messageField),
-            "Please set message field to a different value.")
-            .withConfigProperty(MESSAGE_FIELD).withInputSchemaField(config.messageField);
+          String.format("Input schema already contains message field '%s'.", config.messageField),
+          "Set message field to a different value.")
+          .withConfigProperty(Config.MESSAGE_FIELD).withInputSchemaField(config.messageField);
       }
       if (config.codeField != null && inputSchema.getField(config.codeField) != null) {
         collector.addFailure(
-            String.format("Input schema already contains code field '%s'.", config.codeField),
-            "Please set code field to a different value.")
-            .withConfigProperty(CODE_FIELD).withInputSchemaField(config.codeField);
+          String.format("Input schema already contains code field '%s'.", config.codeField),
+          "Set code field to a different value.")
+          .withConfigProperty(Config.CODE_FIELD).withInputSchemaField(config.codeField);
       }
       if (config.stageField != null && inputSchema.getField(config.stageField) != null) {
         collector.addFailure(
-            String.format("Input schema already contains stage field '%s'.", config.stageField),
-            "Please set stage field to a different value.")
-            .withConfigProperty(STAGE_FIELD).withInputSchemaField(config.stageField);
+          String.format("Input schema already contains stage field '%s'.", config.stageField),
+          "Set stage field to a different value.")
+          .withConfigProperty(Config.STAGE_FIELD).withInputSchemaField(config.stageField);
       }
       Schema outputSchema = getOutputSchema(config, inputSchema);
       pipelineConfigurer.getStageConfigurer().setOutputSchema(outputSchema);
@@ -114,6 +110,10 @@ public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredR
    * The plugin config
    */
   public static class Config extends PluginConfig {
+    public static final String MESSAGE_FIELD = "messageField";
+    public static final String CODE_FIELD = "codeField";
+    public static final String STAGE_FIELD = "stageField";
+
     @Nullable
     @Description("The name of the error message field to use in the output schema. " +
       "If this not specified, the error message will be dropped.")
