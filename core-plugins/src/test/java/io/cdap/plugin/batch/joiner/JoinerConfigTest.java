@@ -66,8 +66,6 @@ public class JoinerConfigTest {
 
   private static final String STAGE = "stage";
   private static final String MOCK_STAGE = "mockstage";
-  private static final String SELECTED_FIELDS = "selectedFields";
-  private static final String JOIN_KEYS = "joinKeys";
 
   @Test
   public void testJoinerConfig() {
@@ -205,7 +203,7 @@ public class JoinerConfigTest {
       Assert.assertEquals(1, e.getFailures().size());
       Assert.assertEquals(1, e.getFailures().get(0).getCauses().size());
       Cause expectedCause = new Cause();
-      expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, SELECTED_FIELDS);
+      expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, JoinerConfig.SELECT_FIELDS);
       expectedCause.addAttribute(STAGE, MOCK_STAGE);
       Assert.assertEquals(expectedCause, e.getFailures().get(0).getCauses().get(0));
     }
@@ -235,7 +233,7 @@ public class JoinerConfigTest {
     // Assert first failure
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, JOIN_KEYS);
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, JoinerConfig.JOIN_KEYS);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
     // Assert second failure
     Assert.assertEquals(1, collector.getValidationFailures().get(1).getCauses().size());
@@ -286,7 +284,7 @@ public class JoinerConfigTest {
       // Assert first failure
       Assert.assertEquals(1, e.getFailures().get(0).getCauses().size());
       Cause expectedCause = new Cause();
-      expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, JOIN_KEYS);
+      expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, JoinerConfig.JOIN_KEYS);
       expectedCause.addAttribute(STAGE, MOCK_STAGE);
       Assert.assertEquals(expectedCause, e.getFailures().get(0).getCauses().get(0));
       // Assert second failure
