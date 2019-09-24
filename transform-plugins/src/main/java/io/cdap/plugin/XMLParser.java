@@ -135,7 +135,7 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
 
       if (xpathmap.length != 2) {
         collector.addFailure(String.format("Invalid XPath mapping: '%s'.", xpath), null)
-            .withConfigElement(XPATH_MAPPINGS, xpath);
+          .withConfigElement(XPATH_MAPPINGS, xpath);
       } else if (xpathmap[0] == null || xpathmap[0].trim().isEmpty()) {
         collector.addFailure(String.format("XPath mapping is missing a field name: '%s'.", xpath), null)
           .withConfigElement(XPATH_MAPPINGS, xpath);
