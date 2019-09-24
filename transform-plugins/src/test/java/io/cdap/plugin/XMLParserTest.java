@@ -23,6 +23,7 @@ import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.InvalidEntry;
 import io.cdap.cdap.etl.api.Transform;
 import io.cdap.cdap.etl.api.validation.CauseAttributes;
+import io.cdap.cdap.etl.api.validation.ValidationException;
 import io.cdap.cdap.etl.api.validation.ValidationFailure.Cause;
 import io.cdap.cdap.etl.mock.common.MockEmitter;
 import io.cdap.cdap.etl.mock.common.MockPipelineConfigurer;
@@ -35,10 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 public class XMLParserTest {
-  private static final String validationExceptionMessage = "Errors were encountered during validation.";
-  private static final String stage = "stage";
-  private static final String mockStage = "mockstage";
-
   private static final Schema INPUT = Schema.recordOf("input", Schema.Field.of("offset", Schema.of(Schema.Type.INT)),
                                                       Schema.Field.of("body", Schema.of(Schema.Type.STRING)));
 
@@ -52,22 +49,18 @@ public class XMLParserTest {
                                                    "Exit on error");
 
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(INPUT);
-    String caughtMessage = "";
     try {
       new XMLParser(config).configurePipeline(configurer);
       Assert.fail();
-    } catch (Exception e) {
-      caughtMessage = e.getMessage();
+    } catch (ValidationException e) {
+      Assert.assertEquals(1, e.getFailures().size());
+      Assert.assertEquals(1, e.getFailures().get(0).getCauses().size());
+      Cause expectedCause = new Cause();
+      expectedCause.addAttribute("stage", "mockstage");
+      expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLParser.Config.FIELD_TYPE_MAPPING);
+      expectedCause.addAttribute(CauseAttributes.CONFIG_ELEMENT, "category:");
+      Assert.assertEquals(expectedCause, e.getFailures().get(0).getCauses().get(0));
     }
-    Assert.assertEquals(validationExceptionMessage, caughtMessage);
-    FailureCollector collector = configurer.getStageConfigurer().getFailureCollector();
-    Assert.assertEquals(1, collector.getValidationFailures().size());
-    Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
-    Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, "fieldTypeMapping");
-    expectedCause.addAttribute(CauseAttributes.CONFIG_ELEMENT, "category:");
-    Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 
   @Test
@@ -279,20 +272,12 @@ public class XMLParserTest {
         "title:string,author:string,year:string",
         "Write to error dataset");
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(INPUT);
-    String caughtMessage = "";
-    try {
-      new XMLParser(config).configurePipeline(configurer);
-      Assert.fail();
-    } catch (Exception e) {
-      caughtMessage = e.getMessage();
-    }
-    Assert.assertEquals(validationExceptionMessage, caughtMessage);
+    new XMLParser(config).configurePipeline(configurer);
     FailureCollector collector = configurer.getStageConfigurer().getFailureCollector();
     Assert.assertEquals(1, collector.getValidationFailures().size());
     Assert.assertEquals(1, collector.getValidationFailures().get(0).getCauses().size());
     Cause expectedCause = new Cause();
-    expectedCause.addAttribute(stage, mockStage);
-    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, "input");
+    expectedCause.addAttribute(CauseAttributes.STAGE_CONFIG, XMLParser.Config.INPUT);
     Assert.assertEquals(expectedCause, collector.getValidationFailures().get(0).getCauses().get(0));
   }
 }
