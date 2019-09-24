@@ -196,7 +196,7 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
         Schema.Field parseField = inputSchema.getField(field);
         if (parseField == null) {
           collector.addFailure(String.format("Field '%s' must exist in input schema.", field), null)
-              .withConfigProperty(FIELD);
+            .withConfigProperty(FIELD);
         }
       }
 
@@ -208,8 +208,10 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
         Schema fieldSchema = field.getSchema();
         Schema.Type type = fieldSchema.isNullable() ? fieldSchema.getNonNullable().getType() : fieldSchema.getType();
         if (!type.isSimpleType()) {
-          collector.addFailure(String.format("Unsupported schema type %s for field '%s'.", type, field.getName()),
-              "The schema may only contain simple types.").withOutputSchemaField(field.getName());
+          collector.addFailure(
+            String.format("Unsupported schema type %s for field '%s'.", type, field.getName()),
+            "The schema may only contain simple types.")
+            .withOutputSchemaField(field.getName());
         }
       }
     }
@@ -219,7 +221,7 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
         return X_PATH_FACTORY.newXPath().compile(xPath);
       } catch (XPathExpressionException e) {
         collector.addFailure(String.format("Failed to compile xpath: %s", xPath), null)
-            .withConfigProperty(XPATH);
+          .withConfigProperty(XPATH);
         throw collector.getOrThrowException();
       }
     }
