@@ -206,9 +206,9 @@ public class UnionSplitter extends SplitterTransform<StructuredRecord, Structure
       Schema.Type type = schema.getType();
       if (type.equals(Schema.Type.ENUM) || type.equals(Schema.Type.MAP)
         || type.equals(Schema.Type.ARRAY) || type.equals(Schema.Type.UNION)) {
-        collector.addFailure(String.format("Unsupported type '%s' within a union.", type),
-                             "The following types are unsupported: enum, map, array, and union.")
-          .withConfigProperty(Conf.UNION_FIELD);
+        collector.addFailure(String.format("Unsupported type '%s' within union field '%s'.", type, unionField),
+                             "The following types are not supported: enum, map, array, and union.")
+          .withConfigProperty(Conf.UNION_FIELD).withInputSchemaField(unionField);
         break;
       }
 
