@@ -177,45 +177,46 @@ public class UnionSplitter extends SplitterTransform<StructuredRecord, Structure
 
     Schema.Field unionSchemaField = inputSchema.getField(unionField);
     if (unionSchemaField == null) {
-      collector.addFailure(String.format("Field '%s' must exist in input schema.", unionField), null)
+      collector.addFailure(String.format("Field '%s' must exist in the input schema.", unionField), null)
         .withConfigProperty(Conf.UNION_FIELD);
-    } else {
-      Schema unionSchema = unionSchemaField.getSchema();
-      if (unionSchema.getType() != Schema.Type.UNION) {
-        collector.addFailure(String.format("Field '%s' must be of type union, but is of type '%s'.",
-                                           unionField, unionSchema.getType()), null)
-          .withConfigProperty(Conf.UNION_FIELD);
+      collector.getOrThrowException();
+    }
+    Schema unionSchema = unionSchemaField.getSchema();
+    if (unionSchema.getType() != Schema.Type.UNION) {
+      collector.addFailure(String.format("Field '%s' must be of type union, but is of type '%s'.",
+                                         unionField, unionSchema.getType()), null)
+        .withConfigProperty(Conf.UNION_FIELD);
+      collector.getOrThrowException();
+    }
+    int numFields = inputSchema.getFields().size();
+    ArrayList<Schema.Field> outputFields = new ArrayList<>(numFields);
+    int i = 0;
+    int unionIndex = -1;
+    for (Schema.Field inputField : inputSchema.getFields()) {
+      if (inputField.getName().equals(unionField)) {
+        unionIndex = i;
+        outputFields.add(null);
       } else {
-        int numFields = inputSchema.getFields().size();
-        ArrayList<Schema.Field> outputFields = new ArrayList<>(numFields);
-        int i = 0;
-        int unionIndex = -1;
-        for (Schema.Field inputField : inputSchema.getFields()) {
-          if (inputField.getName().equals(unionField)) {
-            unionIndex = i;
-            outputFields.add(null);
-          } else {
-            outputFields.add(inputField);
-          }
-          i++;
-        }
-
-        for (Schema schema : unionSchema.getUnionSchemas()) {
-          Schema.Type type = schema.getType();
-          switch (type) {
-            case ENUM:
-            case MAP:
-            case ARRAY:
-            case UNION:
-              collector.addFailure(String.format("Unsupported type '%s' within a union.", type), null)
-                .withConfigProperty(Conf.UNION_FIELD);
-          }
-
-          String port = type == Schema.Type.RECORD ? schema.getRecordName() : type.name().toLowerCase();
-          outputFields.set(unionIndex, Schema.Field.of(unionField, modifySchema ? schema : unionSchema));
-          outputPortSchemas.put(port, Schema.recordOf(inputSchema.getRecordName() + "." + port, outputFields));
-        }
+        outputFields.add(inputField);
       }
+      i++;
+    }
+
+    for (Schema schema : unionSchema.getUnionSchemas()) {
+      Schema.Type type = schema.getType();
+      switch (type) {
+        case ENUM:
+        case MAP:
+        case ARRAY:
+        case UNION:
+          collector.addFailure(String.format("Unsupported type '%s' within a union.", type),
+                               "The following types are unsupported: enum, map, array, and union.")
+            .withConfigProperty(Conf.UNION_FIELD);
+      }
+
+      String port = type == Schema.Type.RECORD ? schema.getRecordName() : type.name().toLowerCase();
+      outputFields.set(unionIndex, Schema.Field.of(unionField, modifySchema ? schema : unionSchema));
+      outputPortSchemas.put(port, Schema.recordOf(inputSchema.getRecordName() + "." + port, outputFields));
     }
 
     return outputPortSchemas;
