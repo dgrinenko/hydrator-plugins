@@ -44,26 +44,25 @@ public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredR
   }
 
   @Override
-  public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
-    // Get failure collector for updated validation API
+  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     Schema inputSchema = pipelineConfigurer.getStageConfigurer().getInputSchema();
     if (inputSchema != null) {
       if (config.messageField != null && inputSchema.getField(config.messageField) != null) {
         collector.addFailure(
-          String.format("Input schema already contains message field '%s'.", config.messageField),
+          String.format("Input schema already contains field '%s'.", config.messageField),
           "Set message field to a different value.")
           .withConfigProperty(Config.MESSAGE_FIELD).withInputSchemaField(config.messageField);
       }
       if (config.codeField != null && inputSchema.getField(config.codeField) != null) {
         collector.addFailure(
-          String.format("Input schema already contains code field '%s'.", config.codeField),
+          String.format("Input schema already contains field '%s'.", config.codeField),
           "Set code field to a different value.")
           .withConfigProperty(Config.CODE_FIELD).withInputSchemaField(config.codeField);
       }
       if (config.stageField != null && inputSchema.getField(config.stageField) != null) {
         collector.addFailure(
-          String.format("Input schema already contains stage field '%s'.", config.stageField),
+          String.format("Input schema already contains field '%s'.", config.stageField),
           "Set stage field to a different value.")
           .withConfigProperty(Config.STAGE_FIELD).withInputSchemaField(config.stageField);
       }
