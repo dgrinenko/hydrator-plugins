@@ -80,13 +80,13 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     outSchema = config.getOutputSchema(collector);
     Schema inputSchema = pipelineConfigurer.getStageConfigurer().getInputSchema();
     if (!this.config.containsMacro(Config.INPUT) && inputSchema != null
       && inputSchema.getField(this.config.inputField) == null) {
-      collector.addFailure(String.format("Input field '%s' must exist in input schema.", this.config.inputField), null)
+      collector.addFailure(
+        String.format("Input field '%s' must exist in the input schema.", this.config.inputField), null)
         .withConfigProperty(Config.INPUT);
     }
     validateXpathAndSchema(collector);
@@ -96,7 +96,6 @@ public class XMLParser extends Transform<StructuredRecord, StructuredRecord> {
   @Override
   public void initialize(TransformContext context) throws Exception {
     super.initialize(context);
-    // Get failure collector for updated validation API
     FailureCollector collector = getContext().getFailureCollector();
     outSchema = config.getOutputSchema(collector);
     xPathMapping = getXPathMapping(collector);
