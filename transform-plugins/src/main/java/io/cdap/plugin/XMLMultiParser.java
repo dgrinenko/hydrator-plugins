@@ -77,7 +77,6 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     config.validate(pipelineConfigurer.getStageConfigurer().getInputSchema(), collector);
     pipelineConfigurer.getStageConfigurer().setOutputSchema(config.getSchema(collector));
@@ -86,7 +85,6 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
   @Override
   public void initialize(TransformContext context) throws Exception {
     super.initialize(context);
-    // Get failure collector for updated validation API
     FailureCollector collector = getContext().getFailureCollector();
     schema = config.getSchema(collector);
     xPathExpression = config.getXPathExpression(collector);
@@ -195,7 +193,7 @@ public class XMLMultiParser extends Transform<StructuredRecord, StructuredRecord
       if (inputSchema != null && !containsMacro(field)) {
         Schema.Field parseField = inputSchema.getField(field);
         if (parseField == null) {
-          collector.addFailure(String.format("Field '%s' must exist in input schema.", field), null)
+          collector.addFailure(String.format("Field '%s' must exist in the input schema.", field), null)
             .withConfigProperty(FIELD);
         }
       }
