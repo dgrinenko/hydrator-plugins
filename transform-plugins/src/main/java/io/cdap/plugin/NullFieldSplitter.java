@@ -70,7 +70,6 @@ public class NullFieldSplitter extends SplitterTransform<StructuredRecord, Struc
   public void initialize(TransformContext context) {
     schemaMap = new HashMap<>();
     Schema inputSchema = context.getInputSchema();
-    // Get failure collector for updated validation API
     FailureCollector collector = context.getFailureCollector();
     if (inputSchema != null) {
       Schema nonNullSchema = getNonNullSchema(context.getInputSchema(), conf.field, collector);
@@ -105,7 +104,7 @@ public class NullFieldSplitter extends SplitterTransform<StructuredRecord, Struc
   private static Map<String, Schema> getOutputSchemas(Schema inputSchema, Conf conf, FailureCollector collector) {
     Map<String, Schema> outputs = new HashMap<>();
     if (inputSchema.getField(conf.field) == null) {
-      collector.addFailure(String.format("Field '%s' must exist in input schema.", conf.field), null)
+      collector.addFailure(String.format("Field '%s' must exist in the input schema.", conf.field), null)
         .withConfigProperty(Conf.FIELD);
     }
 
