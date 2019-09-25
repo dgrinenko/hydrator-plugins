@@ -96,7 +96,6 @@ public final class Encoder extends Transform<StructuredRecord, StructuredRecord>
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     parseConfiguration(config.encode, collector);
 
@@ -130,7 +129,6 @@ public final class Encoder extends Transform<StructuredRecord, StructuredRecord>
   @Override
   public void initialize(TransformContext context) throws Exception {
     super.initialize(context);
-    // Get failure collector for updated validation API
     FailureCollector collector = getContext().getFailureCollector();
     parseConfiguration(config.encode, collector);
     collector.getOrThrowException();
