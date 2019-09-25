@@ -92,24 +92,22 @@ public class Normalize extends Transform<StructuredRecord, StructuredRecord> {
       if (mappings.length != 2) {
         collector.addFailure("Field name and mapping must be provided.", null)
           .withConfigElement(NormalizeConfig.FIELD_MAPPING, fieldMapping);
-      } else {
-        boolean failed = false;
-        //Input schema cannot be null, check added for JUnit test case run.
-        if (inputSchema != null) {
-          if (inputSchema.getField(mappings[0]) == null) {
-            collector.addFailure(String.format("Field '%s' must be present in input schema.", mappings[0]), null)
-              .withConfigElement(NormalizeConfig.FIELD_MAPPING, fieldMapping);
-            failed = true;
-          }
-        }
-        if (outputSchema.getField(mappings[1]) == null) {
-          collector.addFailure(String.format("Mapping '%s' must be present in output schema.", mappings[1]), null)
-            .withConfigElement(NormalizeConfig.FIELD_MAPPING, fieldMapping);
-          failed = true;
-        }
-        if (!failed) {
-          fieldList.add(mappings[0]);
-        }
+        continue;
+      }
+      boolean failed = false;
+      //Input schema cannot be null, check added for JUnit test case run.
+      if (inputSchema != null && inputSchema.getField(mappings[0]) == null) {
+        collector.addFailure(String.format("Field '%s' must be present in input schema.", mappings[0]), null)
+          .withConfigElement(NormalizeConfig.FIELD_MAPPING, fieldMapping);
+        failed = true;
+      }
+      if (outputSchema.getField(mappings[1]) == null) {
+        collector.addFailure(String.format("Mapping '%s' must be present in output schema.", mappings[1]), null)
+          .withConfigElement(NormalizeConfig.FIELD_MAPPING, fieldMapping);
+        failed = true;
+      }
+      if (!failed) {
+        fieldList.add(mappings[0]);
       }
     }
 
@@ -127,46 +125,46 @@ public class Normalize extends Transform<StructuredRecord, StructuredRecord> {
         Strings.isNullOrEmpty(fields[1]) || Strings.isNullOrEmpty(fields[2])) {
         collector.addFailure("Normalizing field, field name, and field value must all be provided.", null)
           .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-      } else {
-        //Input schema cannot be null, check added for JUnit test case run.
-        if (inputSchema != null && inputSchema.getField(fields[0]) == null) {
-          collector.addFailure(
-            String.format("Normalizing field '%s' must be present in input schema.", fields[0]), null)
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
-        if (fieldList.contains(fields[0])) {
-          collector.addFailure(
-            String.format("Field '%s' cannot be used for both mapping and normalizing.", fields[0]), null)
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
-        if (validTypeField == null) {
-          validTypeField = fields[1];
-        } else if (!validTypeField.equals(fields[1])) {
-          collector.addFailure(
-            String.format("Invalid normalizing field type output column name '%s'.", fields[1]),
-            "All normalizing field type output column names must be the same.")
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
-        if (validValueField == null) {
-          validValueField = fields[2];
-        } else if (!validValueField.equals(fields[2])) {
-          collector.addFailure(
-            String.format("Invalid normalizing field value output column name '%s'.", fields[2]),
-            "All normalizing field value output column names must be the same.")
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
-        if (outputSchema.getField(fields[1]) == null) {
-          collector.addFailure(
-            String.format("Normalizing field type output column name '%s' must be present in output schema.",
-                          fields[1]), null)
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
-        if (outputSchema.getField(fields[2]) == null) {
-          collector.addFailure(
-            String.format("Normalizing field value output column name '%s' must be present in output schema.",
-                          fields[2]), null)
-            .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
-        }
+        continue;
+      }
+      //Input schema cannot be null, check added for JUnit test case run.
+      if (inputSchema != null && inputSchema.getField(fields[0]) == null) {
+        collector.addFailure(
+          String.format("Normalizing field '%s' must be present in input schema.", fields[0]), null)
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
+      }
+      if (fieldList.contains(fields[0])) {
+        collector.addFailure(
+          String.format("Field '%s' cannot be used for both mapping and normalizing.", fields[0]), null)
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
+      }
+      if (validTypeField == null) {
+        validTypeField = fields[1];
+      } else if (!validTypeField.equals(fields[1])) {
+        collector.addFailure(
+          String.format("Invalid normalizing field type output column name '%s'.", fields[1]),
+          "All normalizing field type output column names must be the same.")
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
+      }
+      if (validValueField == null) {
+        validValueField = fields[2];
+      } else if (!validValueField.equals(fields[2])) {
+        collector.addFailure(
+          String.format("Invalid normalizing field value output column name '%s'.", fields[2]),
+          "All normalizing field value output column names must be the same.")
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
+      }
+      if (outputSchema.getField(fields[1]) == null) {
+        collector.addFailure(
+          String.format("Normalizing field type output column name '%s' must be present in output schema.",
+                        fields[1]), null)
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
+      }
+      if (outputSchema.getField(fields[2]) == null) {
+        collector.addFailure(
+          String.format("Normalizing field value output column name '%s' must be present in output schema.",
+                        fields[2]), null)
+          .withConfigElement(NormalizeConfig.FIELD_NORMALIZING, fieldNormalizing);
       }
     }
   }
