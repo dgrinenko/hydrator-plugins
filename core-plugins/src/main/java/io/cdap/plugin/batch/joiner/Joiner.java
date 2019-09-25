@@ -78,7 +78,6 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
   public void configurePipeline(MultiInputPipelineConfigurer pipelineConfigurer) {
     MultiInputStageConfigurer stageConfigurer = pipelineConfigurer.getMultiInputStageConfigurer();
     Map<String, Schema> inputSchemas = stageConfigurer.getInputSchemas();
-    // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getMultiInputStageConfigurer().getFailureCollector();
     init(inputSchemas, collector);
     collector.getOrThrowException();
@@ -91,7 +90,6 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
     if (conf.getNumPartitions() != null) {
       context.setNumPartitions(conf.getNumPartitions());
     }
-    // Get failure collector for updated validation API
     FailureCollector collector = context.getFailureCollector();
     init(context.getInputSchemas(), collector);
     collector.getOrThrowException();
@@ -171,7 +169,6 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
 
   @Override
   public void initialize(BatchJoinerRuntimeContext context) {
-    // Get failure collector for updated validation API
     FailureCollector collector = context.getFailureCollector();
     init(context.getInputSchemas(), collector);
     collector.getOrThrowException();
@@ -325,16 +322,13 @@ public class Joiner extends BatchJoiner<StructuredRecord, StructuredRecord, Stru
                         inputFieldName, stageName, inputSchema), null)
           .withConfigElement("selectedFields",
                              String.format("%s.%s as %s", stageName, inputFieldName, alias));
+      } else if (requiredInputs.contains(stageName) || inputField.getSchema().isNullable()) {
+        outputFieldInfo.put(alias, new OutputFieldInfo(alias, stageName, inputFieldName,
+                                                       Schema.Field.of(alias, inputField.getSchema())));
       } else {
-        // set nullable fields for non-required inputs
-        if (requiredInputs.contains(stageName) || inputField.getSchema().isNullable()) {
-          outputFieldInfo.put(alias, new OutputFieldInfo(alias, stageName, inputFieldName,
-                                                         Schema.Field.of(alias, inputField.getSchema())));
-        } else {
-          outputFieldInfo.put(alias, new OutputFieldInfo(alias, stageName, inputFieldName,
-                                                         Schema.Field.of(alias,
-                                                                         Schema.nullableOf(inputField.getSchema()))));
-        }
+        outputFieldInfo.put(alias, new OutputFieldInfo(alias, stageName, inputFieldName,
+                                                       Schema.Field.of(alias,
+                                                                       Schema.nullableOf(inputField.getSchema()))));
       }
     }
 
