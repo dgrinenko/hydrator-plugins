@@ -89,7 +89,7 @@ public class NullFieldSplitter extends SplitterTransform<StructuredRecord, Struc
     } else {
       Schema outputSchema = schemaMap.get(recordSchema);
       if (outputSchema == null) {
-        outputSchema = getNonNullSchema(recordSchema, conf.field);
+        outputSchema = getNonNullSchema(recordSchema, conf.field, null);
         schemaMap.put(recordSchema, outputSchema);
       }
       StructuredRecord.Builder builder = StructuredRecord.builder(outputSchema);
@@ -109,13 +109,13 @@ public class NullFieldSplitter extends SplitterTransform<StructuredRecord, Struc
     }
 
     outputs.put(NULL_PORT, inputSchema);
-    outputs.put(NON_NULL_PORT, conf.modifySchema ? getNonNullSchema(inputSchema, conf.field) : inputSchema);
+    outputs.put(NON_NULL_PORT, conf.modifySchema ? getNonNullSchema(inputSchema, conf.field, collector) : inputSchema);
 
     return outputs;
   }
 
   @VisibleForTesting
-  static Schema getNonNullSchema(Schema nullableSchema, String fieldName) {
+  static Schema getNonNullSchema(Schema nullableSchema, String fieldName, @Nullable FailureCollector collector) {
     List<Schema.Field> fields = new ArrayList<>(nullableSchema.getFields().size());
     for (Schema.Field field : nullableSchema.getFields()) {
       Schema fieldSchema = field.getSchema();
@@ -133,39 +133,14 @@ public class NullFieldSplitter extends SplitterTransform<StructuredRecord, Struc
       }
 
       if (fieldSchemas.isEmpty()) {
-        throw new IllegalArgumentException(
-          String.format("Field '%s' does not contain a non-null type in its union schema.", fieldName));
-      } else if (fieldSchemas.size() == 1) {
-        fields.add(Schema.Field.of(fieldName, fieldSchemas.iterator().next()));
-      } else {
-        fields.add(Schema.Field.of(fieldName, Schema.unionOf(fieldSchemas)));
-      }
-    }
-    return Schema.recordOf(nullableSchema.getRecordName() + ".nonnull", fields);
-  }
-
-  @VisibleForTesting
-  static Schema getNonNullSchema(Schema nullableSchema, String fieldName, FailureCollector collector) {
-    List<Schema.Field> fields = new ArrayList<>(nullableSchema.getFields().size());
-    for (Schema.Field field : nullableSchema.getFields()) {
-      Schema fieldSchema = field.getSchema();
-      if (!field.getName().equals(fieldName) || fieldSchema.getType() != Schema.Type.UNION) {
-        fields.add(field);
-        continue;
-      }
-
-      List<Schema> unionSchemas = fieldSchema.getUnionSchemas();
-      List<Schema> fieldSchemas = new ArrayList<>(unionSchemas.size());
-      for (Schema unionSchema : unionSchemas) {
-        if (unionSchema.getType() != Schema.Type.NULL) {
-          fieldSchemas.add(unionSchema);
+        if (collector != null) {
+          collector.addFailure(
+            String.format("Field '%s' does not contain a non-null type in its union schema.", fieldName), null)
+            .withInputSchemaField(fieldName);
+        } else {
+          throw new IllegalArgumentException(
+            String.format("Field '%s' does not contain a non-null type in its union schema.", fieldName));
         }
-      }
-
-      if (fieldSchemas.isEmpty()) {
-        collector.addFailure(
-          String.format("Field '%s' does not contain a non-null type in its union schema.", fieldName), null)
-          .withInputSchemaField(fieldName);
       } else if (fieldSchemas.size() == 1) {
         fields.add(Schema.Field.of(fieldName, fieldSchemas.iterator().next()));
       } else {
