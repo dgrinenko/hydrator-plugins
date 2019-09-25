@@ -106,7 +106,6 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
     super.configurePipeline(pipelineConfigurer);
-    // Get failure collector for updated validation API
     FailureCollector collector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
     config.validate(collector);
     collector.getOrThrowException();
@@ -118,7 +117,6 @@ public class XMLReaderBatchSource extends ReferenceBatchSource<LongWritable, Obj
 
   @Override
   public void prepareRun(BatchSourceContext context) throws Exception {
-    // Get failure collector for updated validation API
     FailureCollector collector = context.getFailureCollector();
     config.validate(collector);
     collector.getOrThrowException();
