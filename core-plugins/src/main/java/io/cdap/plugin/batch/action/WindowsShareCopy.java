@@ -16,7 +16,6 @@
 
 package io.cdap.plugin.batch.action;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
@@ -67,6 +66,13 @@ public class WindowsShareCopy extends Action {
 
   public WindowsShareCopy(WindowsShareCopyConfig config) {
     this.config = config;
+  }
+
+  @Override
+  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    FailureCollector collector = stageConfigurer.getFailureCollector();
+    config.validate(collector);
   }
 
   @Override
@@ -177,16 +183,6 @@ public class WindowsShareCopy extends Action {
     return name;
   }
 
-  @Override
-  public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
-
-    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
-    FailureCollector collector = stageConfigurer.getFailureCollector();
-
-    config.validate(collector);
-
-  }
-
   /**
    * Creates an {@link ExecutorService} that has the given number of threads.
    *
@@ -284,36 +280,34 @@ public class WindowsShareCopy extends Action {
     }
 
     public void validate(FailureCollector collector) {
-
       if (Strings.isNullOrEmpty(netBiosHostname)) {
-        collector.addFailure("NetBios hostname should be non-null, non-empty.",
-                             "")
+        collector.addFailure("NetBios hostname must be non-null, non-empty.", null)
           .withConfigProperty(NET_BIOS_HOSTNAME);
       }
 
       if (Strings.isNullOrEmpty(netBiosUsername)) {
-        collector.addFailure("NetBios username should be non-null, non-empty.",
-                             "").withConfigProperty(NET_BIOS_USERNAME);
+        collector.addFailure("NetBios username must be non-null, non-empty.", null)
+          .withConfigProperty(NET_BIOS_USERNAME);
       }
 
       if (Strings.isNullOrEmpty(netBiosPassword)) {
-        collector.addFailure("NetBios password should be non-null, non-empty.",
-                             "").withConfigProperty(NET_BIOS_PASSWORD);
+        collector.addFailure("NetBios password must be non-null, non-empty.", null)
+          .withConfigProperty(NET_BIOS_PASSWORD);
       }
 
       if (Strings.isNullOrEmpty(netBiosSharename)) {
-        collector.addFailure("NetBios share name should be non-null, non-empty.",
-                             "").withConfigProperty(NET_BIOS_SHARENAME);
+        collector.addFailure("NetBios share name must be non-null, non-empty.", null)
+          .withConfigProperty(NET_BIOS_SHARENAME);
       }
 
       if (Strings.isNullOrEmpty(sourceDirectory)) {
-        collector.addFailure("NetBios source directory should be non-null, non-empty.",
-                             "").withConfigProperty(SOURCE_DIRECTORY);
+        collector.addFailure("NetBios source directory must be non-null, non-empty.", null)
+          .withConfigProperty(SOURCE_DIRECTORY);
       }
 
       if (Strings.isNullOrEmpty(destinationDirectory)) {
-        collector.addFailure("HDFS destination directory should be non-null, non-empty.",
-                             "").withConfigProperty(DESTINATION_DIRECTORY);
+        collector.addFailure("HDFS destination directory must be non-null, non-empty.", null)
+          .withConfigProperty(DESTINATION_DIRECTORY);
       }
     }
   }

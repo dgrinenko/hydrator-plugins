@@ -52,6 +52,87 @@ import javax.mail.internet.MimeMessage;
 public class EmailAction extends PostAction {
   private final Config config;
 
+  public EmailAction(Config config) {
+    this.config = config;
+  }
+
+  @Override
+  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    FailureCollector collector = stageConfigurer.getFailureCollector();
+    config.validate(collector);
+  }
+
+  // some config fields are not actually nullable even though they are annotated as such
+  // the annotation is only used to tell CDAP that the field is optional, but there is always a default value for it.
+  @SuppressWarnings("ConstantConditions")
+  @Override
+  public void run(BatchActionContext context) throws Exception {
+    if (!config.shouldRun(context)) {
+      return;
+    }
+    FailureCollector collector = context.getFailureCollector();
+    config.validate(collector);
+    collector.getOrThrowException();
+
+    Authenticator authenticator = null;
+
+    Properties javaMailProperties = new Properties();
+    javaMailProperties.put("mail.smtp.host", config.host);
+    javaMailProperties.put("mail.smtp.port", config.port);
+    if (!(Strings.isNullOrEmpty(config.username))) {
+      javaMailProperties.put("mail.smtp.auth", true);
+      authenticator = new Authenticator() {
+        @Override
+        public PasswordAuthentication getPasswordAuthentication() {
+          return new PasswordAuthentication(config.username, config.password);
+        }
+      };
+    }
+    if ("SMTPS".equalsIgnoreCase(config.protocol)) {
+      javaMailProperties.put("mail.smtp.ssl.enable", true);
+    }
+    if ("TLS".equalsIgnoreCase(config.protocol)) {
+      javaMailProperties.put("mail.smtp.starttls.enable", true);
+    }
+
+    Session session = Session.getInstance(javaMailProperties, authenticator);
+    session.setDebug(true);
+
+    try {
+      Message msg = new MimeMessage(session);
+      msg.setFrom(new InternetAddress(config.sender));
+      for (InternetAddress internetAddress : InternetAddress.parse(config.recipients)) {
+        msg.addRecipient(Message.RecipientType.TO, internetAddress);
+      }
+      msg.setSubject(config.subject);
+      WorkflowToken token = context.getToken();
+      String message = config.includeWorkflowToken ?
+        config.message + "\nUSER Workflow Tokens:\n" + token.getAll(WorkflowToken.Scope.USER)
+          + "\nSYSTEM Workflow Tokens:\n" + token.getAll(WorkflowToken.Scope.SYSTEM) :
+        config.message;
+      msg.setText(message);
+
+      // need this because Session will use the context classloader to instantiate an object.
+      // the context classloader here is the etl application's classloader and not this class' classloader.
+      ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      try {
+        Transport transport = session.getTransport(config.protocol);
+        transport.connect(config.host, config.port, config.username, config.password);
+        try {
+          transport.sendMessage(msg, msg.getAllRecipients());
+        } finally {
+          transport.close();
+        }
+      } finally {
+        Thread.currentThread().setContextClassLoader(oldClassLoader);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Error sending email: ", e);
+    }
+  }
+
   /**
    * Config for the email action plugin.
    */
@@ -121,7 +202,7 @@ public class EmailAction extends PostAction {
 
       if (!containsMacro(USERNAME) && (Strings.isNullOrEmpty(username) ^ Strings.isNullOrEmpty(password))) {
         collector.addFailure("Both username and password must be given, or neither of them must be given.",
-                             "Leave username and password fields empty or provide values for both fields")
+                             "Leave username and password fields empty or provide values for both fields.")
           .withConfigProperty(USERNAME).withConfigProperty(PASSWORD);
       }
 
@@ -129,20 +210,16 @@ public class EmailAction extends PostAction {
         try {
           InternetAddress[] addresses = InternetAddress.parse(sender);
           if (addresses.length == 0) {
-            collector.addFailure("Sender email was not specified.", null)
-              .withConfigProperty(SENDER);
+            collector.addFailure("Sender email was not specified.", null).withConfigProperty(SENDER);
           }
           if (addresses.length > 1) {
-            collector.addFailure(String.format("%s is an invalid sender email address. Only one sender is supported.",
-                                               sender),
-                                 "Only specify one sender email address.")
-              .withConfigProperty(SENDER);
+            collector.addFailure(
+              String.format("%s is an invalid sender email address. Only one sender is supported.", sender),
+              "Only specify one sender email address.").withConfigProperty(SENDER);
           }
         } catch (AddressException e) {
           collector.addFailure(String.format("%s is an invalid sender email address. Reason: %s", sender,
-                                             e.getMessage()),
-                               null)
-            .withConfigProperty(SENDER);
+                                             e.getMessage()), null).withConfigProperty(SENDER);
         }
       }
 
@@ -151,93 +228,10 @@ public class EmailAction extends PostAction {
           InternetAddress.parse(recipients);
         } catch (AddressException e) {
           collector.addFailure(String.format("%s is an invalid list of recipient email addresses. Reason: %s",
-                                             recipients, e.getMessage()),
-                               "")
+                                             recipients, e.getMessage()), null)
             .withConfigProperty(RECIPIENTS);
         }
       }
     }
   }
-
-  public EmailAction(Config config) {
-    this.config = config;
-  }
-
-  // some config fields are not actually nullable even though they are annotated as such
-  // the annotation is only used to tell CDAP that the field is optional, but there is always a default value for it.
-  @SuppressWarnings("ConstantConditions")
-  @Override
-  public void run(BatchActionContext context) throws Exception {
-    if (!config.shouldRun(context)) {
-      return;
-    }
-    config.validate(context.getFailureCollector());
-    context.getFailureCollector().getOrThrowException();
-
-    Authenticator authenticator = null;
-
-    Properties javaMailProperties = new Properties();
-    javaMailProperties.put("mail.smtp.host", config.host);
-    javaMailProperties.put("mail.smtp.port", config.port);
-    if (!(Strings.isNullOrEmpty(config.username))) {
-      javaMailProperties.put("mail.smtp.auth", true);
-      authenticator = new Authenticator() {
-        @Override
-        public PasswordAuthentication getPasswordAuthentication() {
-          return new PasswordAuthentication(config.username, config.password);
-        }
-      };
-    }
-    if ("SMTPS".equalsIgnoreCase(config.protocol)) {
-      javaMailProperties.put("mail.smtp.ssl.enable", true);
-    }
-    if ("TLS".equalsIgnoreCase(config.protocol)) {
-      javaMailProperties.put("mail.smtp.starttls.enable", true);
-    }
-
-    Session session = Session.getInstance(javaMailProperties, authenticator);
-    session.setDebug(true);
-
-    try {
-      Message msg = new MimeMessage(session);
-      msg.setFrom(new InternetAddress(config.sender));
-      for (InternetAddress internetAddress : InternetAddress.parse(config.recipients)) {
-        msg.addRecipient(Message.RecipientType.TO, internetAddress);
-      }
-      msg.setSubject(config.subject);
-      WorkflowToken token = context.getToken();
-      String message = config.includeWorkflowToken ?
-        config.message + "\nUSER Workflow Tokens:\n" + token.getAll(WorkflowToken.Scope.USER)
-          + "\nSYSTEM Workflow Tokens:\n" + token.getAll(WorkflowToken.Scope.SYSTEM) :
-        config.message;
-      msg.setText(message);
-
-      // need this because Session will use the context classloader to instantiate an object.
-      // the context classloader here is the etl application's classloader and not this class' classloader.
-      ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      try {
-        Transport transport = session.getTransport(config.protocol);
-        transport.connect(config.host, config.port, config.username, config.password);
-        try {
-          transport.sendMessage(msg, msg.getAllRecipients());
-        } finally {
-          transport.close();
-        }
-      } finally {
-        Thread.currentThread().setContextClassLoader(oldClassLoader);
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Error sending email: ", e);
-    }
-  }
-
-  @Override
-  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
-    FailureCollector collector = stageConfigurer.getFailureCollector();
-
-    config.validate(collector);
-  }
-
 }

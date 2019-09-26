@@ -59,10 +59,20 @@ public class SSHAction extends Action {
   }
 
   @Override
+  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
+    if (!config.containsMacro(SSHActionConfig.PORT)) {
+      StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+      FailureCollector collector = stageConfigurer.getFailureCollector();
+      config.validate(collector);
+    }
+  }
+
+  @Override
   public void run(final ActionContext context) throws Exception {
     // Now that macros have been substituted, try validation again
-    config.validate(context.getFailureCollector());
-    context.getFailureCollector().getOrThrowException();
+    FailureCollector collector = context.getFailureCollector();
+    config.validate(collector);
+    collector.getOrThrowException();
 
     Connection connection = new Connection(config.host, config.port);
     try {
@@ -102,16 +112,6 @@ public class SSHAction extends Action {
       context.getArguments().set(config.outputKey, out);
     } finally {
       connection.close();
-    }
-  }
-
-  @Override
-  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    if (!config.containsMacro("port")) {
-      StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
-      FailureCollector collector = stageConfigurer.getFailureCollector();
-
-      config.validate(collector);
     }
   }
 
@@ -176,9 +176,8 @@ public class SSHAction extends Action {
 
     public void validate(FailureCollector collector) {
       // Check that port is not negative
-      if (!containsMacro(PORT) && port < 0) {
-        collector.addFailure("Port cannot be negative", "Provide a positive port number")
-          .withConfigProperty(PORT);
+      if (!containsMacro(PORT) && port != null && port < 0) {
+        collector.addFailure("Port must be a positive number.", null).withConfigProperty(PORT);
       }
     }
   }

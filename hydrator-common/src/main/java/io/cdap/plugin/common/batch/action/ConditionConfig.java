@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
  * Base plugin config for post actions that contain a setting for when the action should run.
  */
 public class ConditionConfig extends PluginConfig {
+  protected static final String NAME_RUN_CONDITION = "runCondition";
 
   @Nullable
   @Description("When to run the action. Must be 'completion', 'success', or 'failure'. Defaults to 'completion'. " +
@@ -44,6 +45,22 @@ public class ConditionConfig extends PluginConfig {
     this.runCondition = runCondition;
   }
 
+  /**
+   * Validates condition config.
+   *
+   * Deprecated since 2.3.0. Use {@link ConditionConfig#validate(FailureCollector)} instead.
+   */
+  @Deprecated
+  public void validate() {
+    try {
+      Condition.valueOf(runCondition.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(String.format(
+        "Invalid runCondition value '%s'.  Must be one of %s.",
+        runCondition, Joiner.on(',').join(Condition.values())));
+    }
+  }
+
   @SuppressWarnings("ConstantConditions")
   public void validate(FailureCollector collector) {
     try {
@@ -51,7 +68,7 @@ public class ConditionConfig extends PluginConfig {
     } catch (IllegalArgumentException e) {
       collector.addFailure(String.format(
         "Invalid runCondition value '%s'.  Must be one of %s.",
-        runCondition, Joiner.on(',').join(Condition.values())), "");
+        runCondition, Joiner.on(',').join(Condition.values())), "").withConfigProperty(NAME_RUN_CONDITION);
     }
   }
 

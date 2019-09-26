@@ -56,6 +56,13 @@ public class FileDeleteAction extends Action {
   }
 
   @Override
+  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
+    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
+    FailureCollector collector = stageConfigurer.getFailureCollector();
+    config.validate(collector);
+  }
+
+  @Override
   public void run(ActionContext context) throws Exception {
     Path path = new Path(config.path);
 
@@ -104,14 +111,6 @@ public class FileDeleteAction extends Action {
     }
   }
 
-  @Override
-  public void configurePipeline(PipelineConfigurer pipelineConfigurer) {
-    StageConfigurer stageConfigurer = pipelineConfigurer.getStageConfigurer();
-    FailureCollector collector = stageConfigurer.getFailureCollector();
-
-    config.validate(collector);
-  }
-
   /**
    * Config class that contains all properties necessary to execute a file delete command.
    */
@@ -140,7 +139,7 @@ public class FileDeleteAction extends Action {
         try {
           Pattern.compile(fileRegex);
         } catch (Exception e) {
-          collector.addFailure(String.format("File regex %s is invalid: %s", fileRegex, e.getMessage()),
+          collector.addFailure(String.format("File regex '%s' is invalid: %s.", fileRegex, e.getMessage()),
                                "Provide valid regex.").withConfigProperty(FILE_REGEX);
         }
       }
