@@ -67,15 +67,15 @@ public class ErrorCollector extends ErrorTransform<StructuredRecord, StructuredR
                                                                field.getName())));
 
     // emit records for generated fields
-    if (config.messageField != null) {
+    if (config.messageField != null && !config.messageField.isEmpty()) {
       fieldOperations.add(new FieldTransformOperation("Error collector message field", "Generated field",
                                                       Collections.emptyList(), config.messageField));
     }
-    if (config.codeField != null) {
+    if (config.codeField != null && !config.codeField.isEmpty()) {
       fieldOperations.add(new FieldTransformOperation("Error collector code field", "Generated field",
                                                       Collections.emptyList(), config.codeField));
     }
-    if (config.stageField != null) {
+    if (config.stageField != null && !config.stageField.isEmpty()) {
       fieldOperations.add(new FieldTransformOperation("Error collector stage field", "Generated field",
                                                       Collections.emptyList(), config.stageField));
     }
